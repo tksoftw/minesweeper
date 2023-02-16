@@ -1,3 +1,5 @@
+import random
+
 class Position:
 	all_letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 	p_table = {c: i for i, c in enumerate(all_letters)}
@@ -32,10 +34,17 @@ class Grid:
 
 
 	def _calc_numbers(self):
-		for row in self.grid:
-			next_mine = 0
-			while '*' in row:
-				next_mine = row.index('*', start=next_mine)
+		for row_n, row in enumerate(self.grid):
+			next_mine = -1
+			while '*' in row[next_mine+1:]:
+				next_mine = row.index('*', next_mine+1)
+				adj_inds = self._get_adj_inds(row_n, next_mine)
+				for ind_i, ind_j in adj_inds:
+					tile = self.grid[ind_i][ind_j]					
+					if tile == '-':
+						self.grid[ind_i][ind_j] = '1'
+					elif tile != '*':
+						self.grid[ind_i][ind_j] = str(int(tile)+1)
 
 	def _print(self):
 		for row in self.grid:
@@ -66,4 +75,6 @@ if __name__ == '__main__':
 	print('mmmm')
 	g._scatter_mines()
 	g._print()
-	print(g._get_adj_inds(0,0))
+	print('nnnn')
+	g._calc_numbers()
+	g._print()
