@@ -12,12 +12,13 @@ class Grid:
 	def __init__(self):
 		self.grid = [['-']*8 for _ in range(8)]
 		self.viewable_grid = [["-"]*8 for _ in range(8)]
+		self.lakes = []
 
 	def _scatter_mines(self):
-		for i, row in enumerate(self.grid):
-			for j, col in enumerate(row):
-				if i % 2 == 0 and j % 3 == 0:
-					self.grid[i][j] = '*'
+		for _ in range(10):
+			i = random.randint(0, len(self.grid)-1)
+			j = random.randint(0, len(self.grid[i])-1)
+			self.grid[i][j] = '*'
 
 	def _get_adj_inds(self, i, j):
 		adj = []
@@ -32,7 +33,6 @@ class Grid:
 
 		return adj		
 
-
 	def _calc_numbers(self):
 		for row_n, row in enumerate(self.grid):
 			next_mine = -1
@@ -45,6 +45,33 @@ class Grid:
 						self.grid[ind_i][ind_j] = '1'
 					elif tile != '*':
 						self.grid[ind_i][ind_j] = str(int(tile)+1)
+	
+	def _get_lake_set(self, i, j, curr_set=None):	
+		curr_tile = self.grid[i][j]
+		if curr_tile != '-':
+			return curr_set
+
+		self.grid[i][j] = '/'
+		if curr_set is None:
+			curr_set = set()
+		curr_set.add((i, j))
+		
+		neighbors = self._get_adj_inds(i, j)
+		for adj_i, adj_j in neighbors:
+			curr_set.update(self._get_lake_set(adj_i, adj_j, curr_set))
+		return curr_set
+
+
+	def _get_lakes(self):
+		lakes = []
+		for row_n, row in enumerate(self.grid):
+			next_mouth = -1
+			while '-' in row[next_mouth+1:]:
+				next_mouth = row.index('-', next_mouth+1)
+				lakes.append(self._get_lake_set(row_n, next_mouth))
+
+		return lakes
+
 
 	def _print(self):
 		for row in self.grid:
@@ -78,3 +105,8 @@ if __name__ == '__main__':
 	print('nnnn')
 	g._calc_numbers()
 	g._print()
+	print('oooo')
+	lakes = g._get_lakes()
+	g._print()
+	for i, lake in enumerate(lakes):
+		print(f"Lake {i}:", lake)
