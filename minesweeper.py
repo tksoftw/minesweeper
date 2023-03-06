@@ -84,9 +84,11 @@ class Grid:
 
 	def _get_extended_lake(self, lake):
 		# Assuming lake in lakes
-		numbers = []
+		edge_numbers = []
+		adjs = set()
 		for x, y in lake:
-			pass
+			adjs = self._get_adj_inds(x, y)
+			if adjs != set(lake):
 
 	def _print(self):
 		for row in self.grid:
