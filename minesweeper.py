@@ -82,6 +82,12 @@ class Grid:
 				return lake
 		raise ValueError(f"No lake found containing tile: ({pos.x}, {pos.y})")
 
+	def _get_extended_lake(self, lake):
+		# Assuming lake in lakes
+		numbers = []
+		for x, y in lake:
+			pass
+
 	def _print(self):
 		for row in self.grid:
 			print(' '.join(row))
@@ -112,6 +118,8 @@ class Grid:
 		for x, y in to_apply:
 			self.viewable_grid[x][y] = real_tile
 		
+	
+
 
 
 
