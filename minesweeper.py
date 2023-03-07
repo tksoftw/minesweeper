@@ -12,7 +12,7 @@ class Grid:
 	def __init__(self):
 		self.grid = [['-']*8 for _ in range(8)]
 		self.viewable_grid = [["-"]*8 for _ in range(8)]
-		self.lakes = []
+		self.valleys = []
 
 
 	def _scatter_mines(self):
@@ -48,47 +48,45 @@ class Grid:
 					elif tile != '*':
 						self.grid[ind_i][ind_j] = str(int(tile)+1)
 	
-	def _get_lake_set(self, i, j, curr_set=None, replace_ch='.'):	
+	def _get_valley_set(self, i, j, curr_set=None, replace_ch='.'):	
 		curr_tile = self.grid[i][j]
-		if curr_tile != '-':
-			return curr_set
-
-		self.grid[i][j] = replace_ch
+			
 		if curr_set is None:
 			curr_set = set()
 		curr_set.add((i, j))
 		
-		neighbors = self._get_adj_inds(i, j, edges=False)
+		if curr_tile != '-':
+			return curr_set
+
+		self.grid[i][j] = replace_ch
+
+		neighbors = self._get_adj_inds(i, j) # edges=False) maybe unnessary?
 		for adj_i, adj_j in neighbors:
-			curr_set.update(self._get_lake_set(adj_i, adj_j, curr_set, replace_ch))
+			curr_set.update(self._get_valley_set(adj_i, adj_j, curr_set, replace_ch))
 		return curr_set
 
-
-	def _get_lakes(self):
-		ch_n = 0
-		lakes = []
+	def _get_valleys(self):
+		nums = range(26)
+		valleys = []
 		for row_n, row in enumerate(self.grid):
-			next_mouth = -1
-			while '-' in row[next_mouth+1:]:
-				next_mouth = row.index('-', next_mouth+1)
-				lakes.append(self._get_lake_set(row_n, next_mouth)) # , replace_ch=string.ascii_uppercase[ch_n]))
-				ch_n += 1
+			next_enterance = -1
+			while '-' in row[next_enterance+1:]:
+				next_enterance = row.index('-', next_enterance+1)
+				valleys.append(self._get_valley_set(row_n, next_enterance)) # , replace_ch=string.ascii_uppercase[next(nums)]))
 
-		return lakes
+		return valleys
+
+	def _get_valley_by_tile(self, pos: Position):
+		for valley in self.valleys:
+			if (pos.x, pos.y) in valley:
+				return valley
+		raise ValueError(f"No valley found containing tile: ({pos.x}, {pos.y})")
 
 	def _get_lake_by_tile(self, pos: Position):
 		for lake in lakes:
 			if (pos.x, pos.y) in lake:
 				return lake
 		raise ValueError(f"No lake found containing tile: ({pos.x}, {pos.y})")
-
-	def _get_extended_lake(self, lake):
-		# Assuming lake in lakes
-		edge_numbers = []
-		adjs = set()
-		for x, y in lake:
-			adjs = self._get_adj_inds(x, y)
-			if adjs != set(lake):
 
 	def _print(self):
 		for row in self.grid:
@@ -118,7 +116,7 @@ class Grid:
 			lake = self._get_lake_by_tile(pos)
 			to_apply = lake
 		for x, y in to_apply:
-			self.viewable_grid[x][y] = real_tile
+			self.viewable_grid[x][y] = self.grid[x][y]
 		
 	
 
@@ -137,7 +135,7 @@ if __name__ == '__main__':
 	g._calc_numbers()
 	g._print()
 	print('oooo')
-	lakes = g._get_lakes()
+	lakes = g._get_valleys()
 	g._print()
 	for i, lake in enumerate(lakes):
 		print(f"Lake {string.ascii_uppercase[i]}:", lake)
