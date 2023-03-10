@@ -10,7 +10,7 @@ COLORS = {
 
 
 def draw_everything():
-	width, height = 512, 512
+	width, height = 500, 500
 	screen = pygame.display.set_mode((width, height))
 	screen.fill(COLORS['grey'])
 
@@ -18,11 +18,14 @@ def start_game():
 	g = Grid()
 
 def draw_grid(g: Grid):	
-	screen_length = 512
-	outer_border=5+screen_length%8*2
-	available_length = screen_length-2*outer_border
-	print(screen_length, available_length)
-	box_size = available_length//8
+	L = 500
+	C = 10
+	X = (-C + ((-L//2) % 4)) % 4
+	print(L, C, X)
+	outer_border = C + X
+	box_size = (L - 2*outer_border)//8
+	print(box_size)
+
 
 	screen = pygame.display.get_surface()
 
