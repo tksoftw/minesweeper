@@ -9,7 +9,7 @@ class Position:
 		self.y = int(pos_str[1])-1 # accounting for 0-indexing
 
 class Grid:
-	def __init__(self, dim=8):
+	def __init__(self, dim=8, mines=10):
 		self.grid = [['-']*dim for _ in range(dim)]
 		self.viewable_grid = [["-"]*dim for _ in range(dim)]
 		self.hidden_tiles = {(i,j) for j in range(dim) for i in range(dim)}
@@ -17,14 +17,19 @@ class Grid:
 		self.valleys = []
 
 		# prep functions
-		self._scatter_mines()
+		self._scatter_mines(mines)
 		self._calc_numbers()
 		self.valleys = self._get_valleys()
 
-	def _scatter_mines(self):
-		for _ in range(10):
+	def _scatter_mines(self, mines_to_place):
+		placed = set()
+		for _ in range(mines_to_place):
 			i = random.randint(0, len(self.grid)-1)
 			j = random.randint(0, len(self.grid[i])-1)
+			while (i, j) in placed:
+				i = random.randint(0, len(self.grid)-1)
+				j = random.randint(0, len(self.grid[i])-1)
+			placed.add((i,j))
 			self.grid[i][j] = '*'
 			self.mine_count += 1
 

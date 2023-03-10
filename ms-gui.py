@@ -5,7 +5,8 @@ pygame.init()
 COLORS = {
 	'black': (0,0,0),
 	'white': (255,255,255),
-	'grey': (192,192,192)
+	'grey': (192,192,192),
+	'red': (255,0,0)
 }
 
 
@@ -29,27 +30,32 @@ def get_border_padding(screen_length, const_border, boxes_per_row):
 
 def draw_grid(g: Grid):	
 	L = 500
-	C = 50
-	X = get_border_padding(L,C,8)
+	C = 30
+	A = len(g.grid)
+	X = get_border_padding(L,C,A)
 	print(L, C, X)
 	outer_border = C + X
-	box_size = (L - 2*outer_border)/8
+	box_size = (L - 2*outer_border)/A
 	print(box_size)
 
 	screen = pygame.display.get_surface()
 
-	mat = [[0]*8 for _ in range(8)]
-	for x, row in enumerate(mat):
+	for x, row in enumerate(g.grid):
 		for y, v in enumerate(row):
 			xpos = x*box_size + outer_border
 			ypos = y*box_size + outer_border
 			box = pygame.Rect(xpos, ypos, box_size, box_size)
-			pygame.draw.rect(screen, COLORS['black'], box, 1)
+			if v == '*':
+				pygame.draw.rect(screen, COLORS['red'], box)	
+				pygame.draw.rect(screen, COLORS['black'], box, 1)
+			else:
+				pygame.draw.rect(screen, COLORS['black'], box, 1)
 	
 	pygame.display.update()
 
+g = Grid(32, 32)
 draw_everything()
-draw_grid(Grid())
+draw_grid(g)
 
 screen = pygame.display.get_surface()
 running = True
