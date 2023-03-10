@@ -4,9 +4,15 @@ import string
 class Position:
 	p_table = {c: i for i, c in enumerate(string.ascii_uppercase)}
 	
-	def __init__(self, pos_str):
-		self.x = self.p_table[pos_str[0].upper()]
-		self.y = int(pos_str[1])-1 # accounting for 0-indexing
+	def __init__(self, row, col):
+		self.x = col
+		self.y = row
+
+	@classmethod
+	def from_str(cls, pos_str):
+		px = self.p_table[pos_str[0].upper()]
+		py = int(pos_str[1])-1 # accounting for 0-indexing
+		return Position(py, px)
 
 class Grid:
 	def __init__(self, dim=8, mines=10):

@@ -1,4 +1,4 @@
-from minesweeper import Grid
+from minesweeper import Grid, Position
 import pygame
 pygame.init()
 
@@ -6,7 +6,9 @@ COLORS = {
 	'black': (0,0,0),
 	'white': (255,255,255),
 	'grey': (192,192,192),
-	'red': (255,0,0)
+	'red': (255,0,0),
+	'green': (0,255,0),
+	'blue': (0,0,255)
 }
 
 
@@ -40,20 +42,36 @@ def draw_grid(g: Grid):
 
 	screen = pygame.display.get_surface()
 
-	for x, row in enumerate(g.grid):
-		for y, v in enumerate(row):
-			xpos = x*box_size + outer_border
-			ypos = y*box_size + outer_border
-			box = pygame.Rect(xpos, ypos, box_size, box_size)
-			if v == '*':
+	for i, row in enumerate(g.grid):
+		for j, v in enumerate(row):
+			ypos = i*box_size + outer_border
+			xpos = j*box_size + outer_border
+			box = pygame.Rect(ypos, xpos, box_size, box_size)
+			if v == '*' and g.viewable_grid[i][j] == '#':
+				pygame.draw.rect(screen, COLORS['blue'], box)
+			elif v == '*':
 				pygame.draw.rect(screen, COLORS['red'], box)	
-				pygame.draw.rect(screen, COLORS['black'], box, 1)
-			else:
-				pygame.draw.rect(screen, COLORS['black'], box, 1)
+			elif g.viewable_grid[i][j] == '#':
+				pygame.draw.rect(screen, COLORS['green'], box)
+			pygame.draw.rect(screen, COLORS['black'], box, 1)
 	
 	pygame.display.update()
 
-g = Grid(32, 32)
+
+def get_box_inds_from_pos(x, y, window_width, border_length, boxes_per_row):
+	L = window_width
+	B = border_length
+	A = boxes_per_row
+	
+	avail = int(L-2*B) # should always be an whole number anyway
+	box_size = avail//A 
+	print(box_size)
+	row = ((y+B)//box_size)-1 # -1 to account for 0-indexing
+	col = ((x+B)//box_size)-1
+	return (row, col)
+
+
+g = Grid(8, 10)
 draw_everything()
 draw_grid(g)
 
@@ -64,9 +82,12 @@ while running:
 		if event.type == pygame.QUIT:
 			running = False
 	
-				
-	
-
+		if event.type == pygame.MOUSEBUTTONDOWN:
+			print(f'you clicked @: {event.pos}!')
+			box_inds = get_box_inds_from_pos(*event.pos, 500, 30, 8)
+			print('box inds:', box_inds)
+			g.flag(Position(*box_inds))
+			draw_grid(g)
 
 
 pygame.quit()
