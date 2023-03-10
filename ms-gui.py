@@ -17,15 +17,24 @@ def draw_everything():
 def start_game():
 	g = Grid()
 
+
+def get_border_padding(screen_length, const_border, boxes_per_row):
+	W = screen_length
+	C = const_border
+	A = boxes_per_row
+	D = W - 2*C
+	T = D // A
+	x = (W - 2*C - A*T)/2
+	return x
+
 def draw_grid(g: Grid):	
 	L = 500
-	C = 10
-	X = (-C + ((-L//2) % 4)) % 4
+	C = 50
+	X = get_border_padding(L,C,8)
 	print(L, C, X)
 	outer_border = C + X
-	box_size = (L - 2*outer_border)//8
+	box_size = (L - 2*outer_border)/8
 	print(box_size)
-
 
 	screen = pygame.display.get_surface()
 
