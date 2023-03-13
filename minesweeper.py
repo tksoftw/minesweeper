@@ -138,7 +138,6 @@ class Grid:
 		while len(stack):
 			v = stack.pop()
 			i, j = divmod(v, bounds)
-			print(i, j)
 			if not visited[v]:
 				new_valley.add((i,j))
 				visited[v] = True
@@ -162,7 +161,6 @@ class Grid:
 				if v == '-':
 
 					self._add_valley_iter_dfs(i,j,valleys)
-		print(valleys)
 		return valleys
 
 	def _get_valley_by_tile(self, pos: Position):
@@ -184,7 +182,6 @@ class Grid:
 			print(string.ascii_uppercase[i], ' '.join(row))
 
 	def flag(self, pos: Position, unflag_if_flagged=False):
-		print(self.viewable_grid)
 		if self.viewable_grid[pos.x][pos.y] == '-':
 			self.viewable_grid[pos.x][pos.y] = '#'
 		elif self.viewable_grid[pos.x][pos.y] == '#' and unflag_if_flagged:

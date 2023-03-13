@@ -1,5 +1,6 @@
 from minesweeper import Grid, Position
 import pygame
+import time
 pygame.init()
 
 COLORS = {
@@ -33,15 +34,19 @@ class GridGUI():
 		T = D // A
 		x = (W - 2*C - A*T)/2
 		return x
+	
+	def get_box_size(self):
+		W = self.screen_length
+		B = self.total_border
+		A = self.row_length
+		return (W - 2*B)/A
 
 	def draw_grid(self):	
 		self.screen.fill(COLORS['light_grey'])
-
-		box_size = (self.screen_length - 2*self.total_border)/self.row_length
-		print(box_size)
+		box_size = self.get_box_size() 
 		for i, row in enumerate(self.g.grid):
 			for j, v in enumerate(row):
-				viewable = g.viewable_grid[i][j]
+				viewable = self.g.viewable_grid[i][j]
 				ypos = i*box_size + self.total_border
 				xpos = j*box_size + self.total_border
 				box = pygame.Rect(xpos, ypos, box_size, box_size)
@@ -60,28 +65,23 @@ class GridGUI():
 					pygame.draw.rect(self.screen, COLORS['grey'], box)
 					warning_number = self.font.render(v, True, COLORS['black'])
 					aligner = warning_number.get_rect(center=(box.centerx, box.centery))
-				self.screen.blit(warning_number, aligner)
-				
-			pygame.draw.rect(self.screen, COLORS['black'], box, 1)
+					self.screen.blit(warning_number, aligner)
+				pygame.draw.rect(self.screen, COLORS['black'], box, 1)
 
 		pygame.display.update()
 
 
 	def get_box_inds_from_pos(self, x, y):
-		L = self.window_length
 		B = self.total_border
-		A = self.row_length
 		
-		avail = int(L-2*B) # should always be an whole number anyway
-		box_size = avail//A 
-		print(box_size)
-		row = ((x+B)//box_size)-1 # -1 to account for 0-indexing
-		col = ((y+B)//box_size)-1
-		return (row, col)
+		box_size = self.get_box_size()
+		row = ((x+B)/box_size)-1 # -1 to account for 0-indexing
+		col = ((y+B)/box_size)-1
+		return (int(row), int(col)) # should be whole numbers anyway
 
 
 g = Grid(8, 10)
-gui = GridGUI(g, 500, 8)
+gui = GridGUI(g, 500, 30)
 gui.draw_grid()
 
 screen = pygame.display.get_surface()
@@ -92,17 +92,18 @@ while running:
 			running = False
 	
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button in (1,3):
-			box_inds = get_box_inds_from_pos(*event.pos, 500, 30, 8)
+			box_inds = gui.get_box_inds_from_pos(*event.pos)
 			p = Position(*box_inds)
 			if event.button == 1:
-				not_removed_mine = g.remove_tile(p)	
-				running = not_removed_mine
+				removed_mine = not gui.g.remove_tile(p)	
+				game_over = gui.g.is_completed_board() or removed_mine
+				running = not game_over
 			elif event.button == 3:
-				g.flag(p, unflag_if_flagged=True)
+				gui.g.flag(p, unflag_if_flagged=True)
 			gui.draw_grid()
 
-input()
 
+time.sleep(1)
 pygame.quit()
 
 
