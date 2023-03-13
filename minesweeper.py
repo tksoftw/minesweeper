@@ -1,13 +1,6 @@
 import random
 import string
 
-class ValleyManager:
-	def __init__(self):
-		self.valleys = []
-		self.enterances = {}
-	
-		
-
 class Position:
 	p_table = {c: i for i, c in enumerate(string.ascii_uppercase)}
 	
@@ -202,6 +195,10 @@ class Grid:
 			self.viewable_grid[pos.x][pos.y] = '-'
 
 	def remove_tile(self, pos: Position):
+		viewable_tile = self.viewable_grid[pos.x][pos.y]
+		if viewable_tile == '#':
+			return True
+
 		real_tile = self.grid[pos.x][pos.y]
 		to_apply = [(pos.x, pos.y)]
 		if real_tile == '.':
