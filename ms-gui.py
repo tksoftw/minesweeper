@@ -38,7 +38,9 @@ class GridGUI():
 		x2 = f2.size('O')[0]
 		return (x1/y1 + x2/y2)/2
 				
-		
+	def is_in_grid_bounds(self, i, j):
+		return i in range(0, self.row_length) and j in range(0, len(self.g.grid[i]))
+
 	def get_border_padding(self):
 		W = self.screen_length
 		C = self.const_border
@@ -89,25 +91,24 @@ class GridGUI():
 
 
 	def color_hover(self, i, j):
-		if self.hover != (i, j) and self.g.viewable_grid[i][j] == '-' or self.hover is not None:	
-			if self.hover is not None and self.g.viewable_grid[self.hover[0]][self.hover[1]] == '-':
-				self.draw_tile(*self.hover, COLORS['grey'])
-				self.hover = None
-			if self.g.viewable_grid[i][j] == '-':
-				self.draw_tile(i, j, COLORS['mid_grey'])
-				self.hover = (i, j)
-
+		if A:=(self.hover is not None and self.g.viewable_grid[self.hover[0]][self.hover[1]] == '-'):
+			self.draw_tile(*self.hover, COLORS['grey'])
+			self.hover = None
+		if B:=(self.is_in_grid_bounds(i, j) and self.g.viewable_grid[i][j] == '-'):
+			self.draw_tile(i, j, COLORS['mid_grey'])
+			self.hover = (i, j)
+		if A or B:
 			pygame.display.update()
 
-		
+	
 	def get_box_inds_from_pos(self, x, y):
 		B = self.total_border
 		
-		row = ((y-B)/self.box_size)
-		col = ((x-B)/self.box_size)
-		return (int(row), int(col)) # should be whole numbers anyway
+		row = ((y-B)//self.box_size)
+		col = ((x-B)//self.box_size)
+		return (int(row), int(col)) # for indexing, needs to be int
 
-g = Grid(50, 25)
+g = Grid(20, 25)
 gui = GridGUI(g, 800, 50)
 gui.draw_grid()
 
@@ -121,15 +122,12 @@ while running:
 		
 		if event.type == pygame.MOUSEMOTION:
 			i, j = gui.get_box_inds_from_pos(*event.pos)
-			if i not in range (0, gui.row_length-1) or j not in range (0, len(gui.g.grid[i])-1):
-				break
-
 			gui.color_hover(i,j)
 
 
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button in (1,3):
 			i, j = gui.get_box_inds_from_pos(*event.pos)
-			if i not in range (0, gui.row_length-1) or j not in range (0, len(gui.g.grid[i])-1):
+			if not gui.is_in_grid_bounds(i, j):
 				break
 
 			p = Position(i, j)
