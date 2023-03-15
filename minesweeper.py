@@ -5,8 +5,8 @@ class Position:
 	p_table = {c: i for i, c in enumerate(string.ascii_uppercase)}
 	
 	def __init__(self, row, col):
-		self.x = col
-		self.y = row
+		self.r = row
+		self.c = col
 
 	@classmethod
 	def from_str(cls, pos_str):
@@ -165,7 +165,7 @@ class Grid:
 
 	def _get_valley_by_tile(self, pos: Position):
 		for valley in self.valleys:
-			if (pos.x, pos.y) in valley:
+			if (pos.r, pos.c) in valley:
 				return valley
 		return -1
 
@@ -174,7 +174,7 @@ class Grid:
 			print(' '.join(row))
 
 	def _is_mine(self, pos: Position):
-		return self.grid[pos.x][pos.y] == '*'
+		return self.grid[pos.r][pos.c] == '*'
 
 	def print(self):
 		print(' '*2 + ' '.join(str(n) for n in range(1, 9)))
@@ -182,22 +182,22 @@ class Grid:
 			print(string.ascii_uppercase[i], ' '.join(row))
 
 	def flag(self, pos: Position, unflag_if_flagged=False):
-		if self.viewable_grid[pos.x][pos.y] == '-':
-			self.viewable_grid[pos.x][pos.y] = '#'
-		elif self.viewable_grid[pos.x][pos.y] == '#' and unflag_if_flagged:
+		if self.viewable_grid[pos.r][pos.c] == '-':
+			self.viewable_grid[pos.r][pos.c] = '#'
+		elif self.viewable_grid[pos.r][pos.c] == '#' and unflag_if_flagged:
 			self.unflag(pos)
 	
 	def unflag(self, pos: Position):
-		if self.viewable_grid[pos.x][pos.y] == '#':
-			self.viewable_grid[pos.x][pos.y] = '-'
+		if self.viewable_grid[pos.r][pos.c] == '#':
+			self.viewable_grid[pos.r][pos.c] = '-'
 
 	def remove_tile(self, pos: Position):
-		viewable_tile = self.viewable_grid[pos.x][pos.y]
+		viewable_tile = self.viewable_grid[pos.r][pos.c]
 		if viewable_tile == '#':
 			return True
 
-		real_tile = self.grid[pos.x][pos.y]
-		to_apply = [(pos.x, pos.y)]
+		real_tile = self.grid[pos.r][pos.c]
+		to_apply = [(pos.r, pos.c)]
 		if real_tile == '.':
 			lake = self._get_valley_by_tile(pos)
 			to_apply = lake

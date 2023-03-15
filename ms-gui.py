@@ -6,12 +6,12 @@ pygame.init()
 COLORS = {
 	'black': (0,0,0),
 	'white': (255,255,255),
-	'grey': (192,192,192),
+	'grey': (138,138,138),
 	'red': (255,0,0),
 	'green': (0,255,0),
 	'blue': (0,0,255),
-	'light_grey': (138,138,138),
-	'mid_light_grey': (168,168,168)
+	'light_grey': (192,192,192),
+	'mid_grey': (148,148,148)
 }
 
 
@@ -55,7 +55,7 @@ class GridGUI():
 		return (W - 2*B)/A
 
 	def draw_grid(self):	
-		self.screen.fill(COLORS['light_grey'])
+		self.screen.fill(COLORS['grey'])
 		for i, row in enumerate(self.g.grid):
 			for j, v in enumerate(row):
 				viewable = self.g.viewable_grid[i][j]
@@ -71,9 +71,9 @@ class GridGUI():
 					aligner = flag.get_rect(center=(box.centerx, box.centery))
 					self.screen.blit(flag, aligner)
 				elif viewable == '.':
-					pygame.draw.rect(self.screen, COLORS['grey'], box)
+					pygame.draw.rect(self.screen, COLORS['light_grey'], box)
 				elif viewable.isdigit():
-					pygame.draw.rect(self.screen, COLORS['grey'], box)
+					pygame.draw.rect(self.screen, COLORS['light_grey'], box)
 					warning_number = self.font.render(v, True, COLORS['black'])
 					aligner = warning_number.get_rect(center=(box.centerx, box.centery))
 					self.screen.blit(warning_number, aligner)
@@ -89,22 +89,25 @@ class GridGUI():
 
 
 	def color_hover(self, i, j):
-		print(i,j)
-		if self.hover != (i, j):
-			if self.g.viewable_grid[i][j] == '-':
-				self.draw_tile(i, j, COLORS['mid_light_grey'])
+		if self.hover != (i, j) and self.g.viewable_grid[i][j] == '-' or self.hover is not None:	
+			if self.hover is not None and self.g.viewable_grid[self.hover[0]][self.hover[1]] == '-':
 				self.draw_tile(*self.hover, COLORS['grey'])
+				self.hover = None
+			if self.g.viewable_grid[i][j] == '-':
+				self.draw_tile(i, j, COLORS['mid_grey'])
 				self.hover = (i, j)
-				pygame.display.update()
 
+			pygame.display.update()
+
+		
 	def get_box_inds_from_pos(self, x, y):
 		B = self.total_border
 		
-		row = ((x-B)/self.box_size)
-		col = ((y-B)/self.box_size)
+		row = ((y-B)/self.box_size)
+		col = ((x-B)/self.box_size)
 		return (int(row), int(col)) # should be whole numbers anyway
 
-g = Grid(10, 10)
+g = Grid(50, 25)
 gui = GridGUI(g, 800, 50)
 gui.draw_grid()
 
@@ -115,14 +118,21 @@ while running:
 		if event.type == pygame.QUIT:
 			running = False
 		
+		
 		if event.type == pygame.MOUSEMOTION:
-			j, i = gui.get_box_inds_from_pos(*event.pos)
+			i, j = gui.get_box_inds_from_pos(*event.pos)
+			if i not in range (0, gui.row_length-1) or j not in range (0, len(gui.g.grid[i])-1):
+				break
+
 			gui.color_hover(i,j)
 
 
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button in (1,3):
-			box_inds = gui.get_box_inds_from_pos(*event.pos)
-			p = Position(*box_inds)
+			i, j = gui.get_box_inds_from_pos(*event.pos)
+			if i not in range (0, gui.row_length-1) or j not in range (0, len(gui.g.grid[i])-1):
+				break
+
+			p = Position(i, j)
 			if event.button == 1:
 				removed_mine = not gui.g.remove_tile(p)	
 				game_over = gui.g.is_completed_board() or removed_mine
