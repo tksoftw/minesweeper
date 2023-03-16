@@ -25,8 +25,8 @@ class GridGUI():
 		self.total_border = const_border + self.get_border_padding()
 		self.box_size = self.get_box_size()	
 		self.screen = pygame.display.set_mode((screen_length, screen_length))
-		k = self.get_px_to_pt_multiplier()
-		self.font = pygame.font.Font(pygame.font.get_default_font(), int(self.box_size*k))
+		self.font_multiplier = self.get_px_to_pt_multiplier()
+		self.font = pygame.font.Font(pygame.font.get_default_font(), int(self.box_size*self.font_multiplier))
 		self.hover = None
 
 	def get_px_to_pt_multiplier(self):
@@ -110,13 +110,44 @@ class GridGUI():
 		p = Position(i,j)
 		return self.g.is_in_bounds(p)
 
-	def pause_menu(self, w=640, h=480):
+	def get_midpoints(self, l, r, max_depth=1, cur_depth=0):
+		midpoint = (l + r) / 2
+		if cur_depth == max_depth:
+			return [midpoint]
+		
+		l_midpoint = self.get_midpoints(l, midpoint, max_depth, cur_depth+1)
+		r_midpoint = self.get_midpoints(midpoint, r, max_depth, cur_depth+1)
+		return l_midpoint + r_midpoint
+		
+
+	def pause_menu(self, w=640*2, h=480):
 		self.screen = pygame.display.set_mode((w, h))
 		self.screen.fill(COLORS['purple'])
-		box = pygame.Rect(0, 0, w//4, h//4)
-		box.center = (w/2, h/2)
-		pygame.draw.rect(self.screen, COLORS['black'], box)
+		outer_box = pygame.Rect(0, 0, w//1.25, h//2)
+		outer_box.center = (w/2, h/2)
+		pygame.draw.rect(self.screen, COLORS['black'], outer_box)	
 
+		# render buttons
+		button_count = 4
+		mps = self.get_midpoints(outer_box.x, outer_box.x+outer_box.w, 2)
+		boxes = []
+		for xmid in mps:
+			b = pygame.Rect(0, 0, outer_box.w/5, outer_box.h/4)
+			b.center = xmid, outer_box.h/1.25
+			boxes.append(b)	
+			pygame.draw.rect(self.screen, COLORS['red'], b, 2)
+		
+		# render text on buttons
+		C = 1.5*(boxes[0].w+boxes[0].h)/(outer_box.w+outer_box.h)
+		pt = int((boxes[0].w+boxes[0].h)/2*self.font_multiplier*C) 
+		text_font = pygame.font.Font(pygame.font.get_default_font(), pt)
+		boxes.sort(key=lambda box: box.x)
+		messages = ('Easy', 'Normal', 'Expert', 'Custom')
+		for i, box in enumerate(boxes):
+			text = text_font.render(messages[i%len(boxes)], True, COLORS['white'])
+			aligner = text.get_rect(center=(box.center))
+			self.screen.blit(text, aligner)
+	
 
 		pygame.display.update()
 		while True:
