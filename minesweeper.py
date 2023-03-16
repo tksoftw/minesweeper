@@ -96,37 +96,6 @@ class Grid:
 
 		return valleys
 
-	def _add_valley_tile(self, i, j, valleys, enterances):
-		tile = (i, j)
-		#print('CT', tile)
-		valley = None
-		if tile in enterances:
-			valley = enterances.get(tile)
-			valley.append(tile)
-		else:
-			#print('happening!!!!!!!!!!!!!!')
-			valleys.append([(tile)])
-			valley = valleys[-1]
-
-		#print('ADJs')
-		for adj in self._get_adj_inds(*tile):	
-			#print(adj)
-			#print(valleys)
-			if adj in enterances and enterances[adj] != valley:
-				#print('FIXING!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-				#print('adj', adj, ':', enterances[adj])
-				#print('val', valley)
-				precursor_valley = enterances[adj]
-				valley_n = valleys.index(precursor_valley)
-				#print(valley)
-				#print(precursor_valley)
-				valley = precursor_valley
-				precursor_valley.extend(valleys[valley_n])
-				#print('oneeee', valley)
-				#print('twoooo', precursor_valley)
-			elif self.grid[adj[0]][adj[1]] == '-':
-				enterances[adj] = valley
-
 	def _add_valley_iter_dfs(self, i, j, valleys):
 		new_valley = set()
 		bounds = len(self.grid)
@@ -175,6 +144,9 @@ class Grid:
 
 	def _is_mine(self, pos: Position):
 		return self.grid[pos.r][pos.c] == '*'
+	
+	def is_in_bounds(self, pos: Position):
+		return pos.r in range(len(self.grid)) and pos.c in range(len(self.grid[pos.r]))
 
 	def print(self):
 		print(' '*2 + ' '.join(str(n) for n in range(1, 9)))

@@ -11,7 +11,8 @@ COLORS = {
 	'green': (0,255,0),
 	'blue': (0,0,255),
 	'light_grey': (192,192,192),
-	'mid_grey': (148,148,148)
+	'mid_grey': (148,148,148),
+	'purple': (98, 2, 185)
 }
 
 
@@ -38,9 +39,6 @@ class GridGUI():
 		x2 = f2.size('O')[0]
 		return (x1/y1 + x2/y2)/2
 				
-	def is_in_grid_bounds(self, i, j):
-		return i in range(0, self.row_length) and j in range(0, len(self.g.grid[i]))
-
 	def get_border_padding(self):
 		W = self.screen_length
 		C = self.const_border
@@ -94,12 +92,11 @@ class GridGUI():
 		if A:=(self.hover is not None and self.g.viewable_grid[self.hover[0]][self.hover[1]] == '-'):
 			self.draw_tile(*self.hover, COLORS['grey'])
 			self.hover = None
-		if B:=(self.is_in_grid_bounds(i, j) and self.g.viewable_grid[i][j] == '-'):
+		if B:=(self.g.is_in_bounds(Position(i,j)) and self.g.viewable_grid[i][j] == '-'):
 			self.draw_tile(i, j, COLORS['mid_grey'])
 			self.hover = (i, j)
 		if A or B:
 			pygame.display.update()
-
 	
 	def get_box_inds_from_pos(self, x, y):
 		B = self.total_border
@@ -108,40 +105,69 @@ class GridGUI():
 		col = ((x-B)//self.box_size)
 		return (int(row), int(col)) # for indexing, needs to be int
 
-g = Grid(20, 25)
-gui = GridGUI(g, 800, 50)
-gui.draw_grid()
+	def is_in_playable_area(self, x, y):
+		i, j = self.get_box_inds_from_pos(x,y)
+		p = Position(i,j)
+		return self.g.is_in_bounds(p)
 
-screen = pygame.display.get_surface()
-running = True
-while running:
-	for event in pygame.event.get():
-		if event.type == pygame.QUIT:
-			running = False
-		
-		
-		if event.type == pygame.MOUSEMOTION:
-			i, j = gui.get_box_inds_from_pos(*event.pos)
-			gui.color_hover(i,j)
+	def pause_menu(self, w=640, h=480):
+		self.screen = pygame.display.set_mode((w, h))
+		self.screen.fill(COLORS['purple'])
+		box = pygame.Rect(0, 0, w//4, h//4)
+		box.center = (w/2, h/2)
+		pygame.draw.rect(self.screen, COLORS['black'], box)
 
 
-		if event.type == pygame.MOUSEBUTTONDOWN and event.button in (1,3):
-			i, j = gui.get_box_inds_from_pos(*event.pos)
-			if not gui.is_in_grid_bounds(i, j):
-				break
+		pygame.display.update()
+		while True:
+			for event in pygame.event.get():
+				if event.type == pygame.QUIT:
+					return False
 
-			p = Position(i, j)
-			if event.button == 1:
-				removed_mine = not gui.g.remove_tile(p)	
-				game_over = gui.g.is_completed_board() or removed_mine
-				running = not game_over
-			elif event.button == 3:
-				gui.g.flag(p, unflag_if_flagged=True)
-			gui.draw_grid()
+				if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+					pass
+			
+
+	def play_game(self):
+		self.screen = pygame.display.set_mode((self.screen_length, self.screen_length))
+		while True:
+			for event in pygame.event.get():
+				if event.type == pygame.QUIT:
+					return False
+
+				if event.type == pygame.MOUSEMOTION:
+					i, j = gui.get_box_inds_from_pos(*event.pos)
+					gui.color_hover(i,j)
+
+				
+				if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and gui.is_in_playable_area(*event.pos):
+					print('eeeeeeeeee')
+					i, j = gui.get_box_inds_from_pos(*event.pos)
+					p = Position(i, j)
+					removed_mine = not gui.g.remove_tile(p)
+					gui.draw_grid()
+					if gui.g.is_completed_board():
+						return True
+					if removed_mine:
+						return False
+					
+				elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and gui.is_in_playable_area(*event.pos):
+					i, j = gui.get_box_inds_from_pos(*event.pos)
+					p = Position(i, j)
+					
+					gui.g.flag(p, unflag_if_flagged=True)
+					gui.draw_grid()
+
+if __name__ == '__main__':
+	g = Grid(20, 25)
+	gui = GridGUI(g, 800, 50)
+	#gui.draw_grid()
+
+	gui.pause_menu()
+	gui.play_game()
 
 
-time.sleep(1)
-pygame.quit()
+	pygame.quit()
 
 
 
