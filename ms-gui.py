@@ -110,20 +110,20 @@ class GridGUI():
 		p = Position(i,j)
 		return self.g.is_in_bounds(p)
 
-	def get_midpoints(self, l, r, max_depth=1, cur_depth=0):
+	def get_midpoints(self, l, r, splits=1, cur_depth=0):
 		midpoint = (l + r) / 2
-		if cur_depth == max_depth:
+		if cur_depth == splits:
 			return [midpoint]
 		
-		l_midpoint = self.get_midpoints(l, midpoint, max_depth, cur_depth+1)
-		r_midpoint = self.get_midpoints(midpoint, r, max_depth, cur_depth+1)
+		l_midpoint = self.get_midpoints(l, midpoint, splits, cur_depth+1)
+		r_midpoint = self.get_midpoints(midpoint, r, splits, cur_depth+1)
 		return l_midpoint + r_midpoint
 		
 
-	def pause_menu(self, w=640*2, h=480):
+	def pause_menu(self, w=640*1.75, h=480*2):
 		self.screen = pygame.display.set_mode((w, h))
 		self.screen.fill(COLORS['purple'])
-		outer_box = pygame.Rect(0, 0, w//1.25, h//2)
+		outer_box = pygame.Rect(0, 0, w//1.25, h//1.5)
 		outer_box.center = (w/2, h/2)
 		pygame.draw.rect(self.screen, COLORS['black'], outer_box)	
 
@@ -133,7 +133,7 @@ class GridGUI():
 		boxes = []
 		for xmid in mps:
 			b = pygame.Rect(0, 0, outer_box.w/5, outer_box.h/4)
-			b.center = xmid, outer_box.h/1.25
+			b.midtop = xmid, -b.h+outer_box.bottomleft[1]-(outer_box.h-b.h)*(.85) # 85% up
 			boxes.append(b)	
 			pygame.draw.rect(self.screen, COLORS['red'], b, 2)
 		
@@ -147,6 +147,43 @@ class GridGUI():
 			text = text_font.render(messages[i%len(boxes)], True, COLORS['white'])
 			aligner = text.get_rect(center=(box.center))
 			self.screen.blit(text, aligner)
+
+		# render sliders
+		slider_container = pygame.Rect(0,0, outer_box.w/2, outer_box.bottomleft[1]-boxes[0].bottomleft[1])
+		slider_container.bottomleft = outer_box.bottomleft
+		sc2 = pygame.Rect(0,0, slider_container.w*.8, slider_container.h*.7)
+		sc2.midtop = slider_container.midtop
+		pygame.draw.rect(self.screen, COLORS['grey'], slider_container, 2)
+		pygame.draw.rect(self.screen, COLORS['light_grey'], sc2, 2)
+		slider_count = 2
+		sliders = []
+		mps = self.get_midpoints(sc2.y, sc2.y+sc2.h, 1)
+		for ymid in mps:
+			sc3 = pygame.Rect(0,0, outer_box.w/2.25, outer_box.h/5)	
+			sc3.midleft = boxes[0].x, ymid
+			pygame.draw.rect(self.screen, COLORS['blue'], sc3, 2)
+			inner_mps = self.get_midpoints(sc3.y, sc3.y+sc3.h, 1)
+			for i, inner_ymid in enumerate(inner_mps):
+				sc4 = pygame.Rect(0,0, sc3.w/2, sc3.h/1.70)	
+				sc4.midleft = boxes[0].x, inner_ymid
+				pygame.draw.rect(self.screen, COLORS['purple'], sc4, 2)
+				if (i+1) % 2 == 0:
+					s = pygame.Rect(0,0, sc4.w/1.25, sc4.h/16)
+					s.center = sc4.center
+					pygame.draw.rect(self.screen, COLORS['green'], s)
+					sb = pygame.Rect(0,0, sc4.h/2.5, sc4.h/2.5)
+					sb.center = s.midleft
+					pygame.draw.rect(self.screen, COLORS['mid_grey'], sb, border_radius=int(sc4.h//2))
+					sliders.append((s, sb))
+				
+					
+
+
+		
+		
+		
+
+
 	
 
 		pygame.display.update()
@@ -195,7 +232,7 @@ if __name__ == '__main__':
 	#gui.draw_grid()
 
 	gui.pause_menu()
-	gui.play_game()
+	#gui.play_game()
 
 
 	pygame.quit()
