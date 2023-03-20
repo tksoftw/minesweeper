@@ -151,6 +151,8 @@ class GridGUI():
 					pygame.draw.rect(self.screen, COLORS['mid_grey'], sb, border_radius=int(sc4.h//2))
 					sliders.append((s, sb))
 
+		return sliders
+
 
 	def pause_menu(self, w=640*1.75, h=480*2):
 		self.screen = pygame.display.set_mode((w, h))
@@ -186,19 +188,25 @@ class GridGUI():
 		scB = pygame.Rect(scA)
 		scB.bottomright = outer_box.bottomright
 		self.render_sliders(scA, outer_box, boxes)		
-		self.render_sliders(scB, outer_box, boxes, True)			
-
-
-
-
+		self.render_sliders(scB, outer_box, boxes, True)	
 		pygame.display.update()
+
+		# main stuff
+		c_xrange = range(boxes[-1].x, boxes[-1].x+boxes[-1].w)
+		c_yrange = range(boxes[-1].y, boxes[-1].y+boxes[-1].h)
+		c_menu = True
 		while True:
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:
 					return False
 
-				if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-					pass
+				if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and event.pos[0] in c_xrange and event.pos[1] in c_yrange:
+					if not c_menu:
+						self.render_sliders(scB, outer_box, boxes, True)
+					else:
+						pygame.draw.rect(self.screen, COLORS['black'], scB)
+					pygame.display.update(scA)
+					c_menu = not c_menu
 			
 
 	def play_game(self):
@@ -236,7 +244,7 @@ if __name__ == '__main__':
 	gui = GridGUI(g, 800, 50)
 	#gui.draw_grid()
 
-	gui.pause_menu()
+	gui.pause_menu(759, 500)
 	#gui.play_game()
 
 
