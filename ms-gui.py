@@ -16,20 +16,36 @@ COLORS = {
 }
 
 class MenuGUI():
-	def __init__(self, w=640, h=480):
+	def __init__(self, w=640, h=480, fullscreen=False):
 		self.w = w
 		self.h = h
-		self.screen = pygame.display.set_mode((w, h))
+		self.fullscreen = fullscreen
+		if fullscreen:
+			self.screen = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
+		else:
+			self.screen = pygame.display.set_mode((w, h), pygame.RESIZABLE)
 		self.screen.fill(COLORS['purple'])
 		self.inner_box = pygame.Rect(0, 0, w//1.25, h//1.5)
 		self.inner_box.center = (w/2, h/2)
 		pygame.draw.rect(self.screen, COLORS['black'], self.inner_box)
-	
+		
 		self.font_multiplier = self.get_px_to_pt_multiplier()
 
 		self.buttons = []
 		self.sliders = []
 
+		# render rectangles
+		self.render_everything()
+	
+	def update_screen(self, w, h):
+		self.w = w
+		self.h = h
+		self.screen = pygame.display.set_mode((w, h), pygame.RESIZABLE)
+		self.screen.fill(COLORS['purple'])
+		self.inner_box = pygame.Rect(0, 0, w//1.25, h//1.5)
+		self.inner_box.center = (w/2, h/2)
+		pygame.draw.rect(self.screen, COLORS['black'], self.inner_box)
+		self.font_multiplier = self.get_px_to_pt_multiplier()
 	
 	def get_px_to_pt_multiplier(self, test_str='O'):
 			# x -> font pt, y -> font px
@@ -127,31 +143,57 @@ class MenuGUI():
 		slidersA = self.render_sliders(scA)		
 		slidersB = self.render_sliders(scB, True)
 
+		# hide custom gamemode sliders
+		pygame.draw.rect(self.screen, COLORS['black'], scB)
+
+
 		self.sliders.append((scA, slidersA))
 		self.sliders.append((scB, slidersB))
 		pygame.display.update()
 	
-	def run(self):
-		# render rectangles
-		self.render_everything()
-
-		# main stuff
+	def get_c_ranges(self):
 		c_xrange = range(self.buttons[-1].x, self.buttons[-1].x+self.buttons[-1].w)
 		c_yrange = range(self.buttons[-1].y, self.buttons[-1].y+self.buttons[-1].h)
+		return c_xrange, c_yrange
+
+	def run(self):
+		# main stuff
+		c_xrange, c_yrange = self.get_c_ranges()
 		c_sliders = self.sliders[1][0]
-		c_menu = True
+		c_settings_visible = False
+		last_dims = self.w, self.h 
+		
 		while True:
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:
 					return False
+				
+				if event.type == pygame.WINDOWMAXIMIZED:
+					self.__init__(fullscreen=True)
+					c_xrange, c_yrange = self.get_c_ranges()
+					c_sliders = self.sliders[1][0]
+					if c_settings_visible:
+						self.render_sliders(c_sliders, True)
+
+
+				elif event.type == pygame.WINDOWRESTORED:
+					print('hola!')
+
+				elif event.type == pygame.WINDOWRESIZED and not self.fullscreen:
+					new_w, new_h = event.x, event.y
+					self.__init__(new_w, new_h)
+					c_xrange, c_yrange = self.get_c_ranges()
+					c_sliders = self.sliders[1][0]
+					if c_settings_visible:
+						self.render_sliders(c_sliders, True)
 
 				if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.in_range_2d(event.pos, c_xrange, c_yrange):
-					if not c_menu:
+					if not c_settings_visible :
 						self.render_sliders(c_sliders, True)
 					else:
 						pygame.draw.rect(self.screen, COLORS['black'], c_sliders)
 					pygame.display.update(c_sliders)
-					c_menu = not c_menu
+					c_settings_visible  = not c_settings_visible 
 
 
 class GridGUI():
