@@ -16,7 +16,7 @@ COLORS = {
 }
 
 class MenuGUI():
-	def __init__(self, w=640, h=480):
+	def __init__(self, w=640, h=480, c_visible=False):
 		self.screen = pygame.display.set_mode((w, h), pygame.RESIZABLE)
 		self.w, self.h = w, h
 		self.screen.fill(COLORS['purple'])
@@ -26,11 +26,13 @@ class MenuGUI():
 		
 		self.font_multiplier = self.get_px_to_pt_multiplier()
 
+		self.draw_debug = True
+
 		self.buttons = self.get_buttons()
 		self.sliders = self.get_sliders()
 
 		self.custom_settings_box = None
-		self.custom_settings_visible = False
+		self.custom_settings_visible = c_visible
 
 		# render rectangles
 		self.render_everything()
@@ -64,32 +66,31 @@ class MenuGUI():
 			b.midtop = xmid, -b.h+self.inner_box.bottomleft[1]-(self.inner_box.h-b.h)*(.85) # 85% up
 			boxes.append(b)	
 		
-		# render text on buttons
-		C = 1.5*(boxes[0].w+boxes[0].h)/(self.inner_box.w+self.inner_box.h)
-		pt = int((boxes[0].w+boxes[0].h)/2*self.font_multiplier*C) 
-		text_font = pygame.font.Font(pygame.font.get_default_font(), pt)
 		boxes.sort(key=lambda box: box.x)
-		
-
 		return boxes
 	
 	def draw_buttons(self):
+		# font setup
+		C = 1.5*(self.buttons[0].w+self.buttons[0].h)/(self.inner_box.w+self.inner_box.h)
+		pt = int((self.buttons[0].w+self.buttons[0].h)/2*self.font_multiplier*C) 
+		text_font = pygame.font.Font(pygame.font.get_default_font(), pt)
+
 		messages = ('Easy', 'Normal', 'Expert', 'Custom')
-		for i, box in enumerate(boxes):
+		for i, b in enumerate(self.buttons):
 			# render box
 			pygame.draw.rect(self.screen, COLORS['red'], b, 2)
 			# draw text
-			text = text_font.render(messages[i%len(boxes)], True, COLORS['white'])
-			aligner = text.get_rect(center=(box.center))
+			text = text_font.render(messages[i%len(self.buttons)], True, COLORS['white'])
+			aligner = text.get_rect(center=(b.center))
 			self.screen.blit(text, aligner)
 
-	def get_sliders(self, opposite_side=False, draw_debug=False):
+	def get_sliders(self, opposite_side=False):
 		slider_container = pygame.Rect(0,0, self.inner_box.w/2, self.inner_box.bottomleft[1]-self.buttons[0].bottomleft[1])
 		if not opposite_side:
-			scA.bottomleft = self.inner_box.bottomleft
+			slider_container.bottomleft = self.inner_box.bottomleft
 		else:
-			scB.bottomright = self.inner_box.bottomright
-			self.custom_slider_box = scB
+			slider_container.bottomright = self.inner_box.bottomright
+			self.custom_slider_box = slider_container
 
 		sc2 = pygame.Rect(0,0, slider_container.w*.8, slider_container.h*.7)
 		sc2.center = slider_container.center
@@ -123,7 +124,7 @@ class MenuGUI():
 					radius = int(sc4.h//2)
 					sliders.append((s, sb, radius))
 		
-		if draw_debug:
+		if self.draw_debug:
 			pygame.draw.rect(self.screen, COLORS['grey'], slider_container, 2)
 			pygame.draw.rect(self.screen, COLORS['light_grey'], sc2, 2)
 			for sc3 in debug_rects_sc3:
@@ -131,22 +132,35 @@ class MenuGUI():
 			for sc4 in debug_rects_sc4:	
 				pygame.draw.rect(self.screen, COLORS['purple'], sc4, 2)
 		
-		if not opposite_side
-			return sliders + self.get_sliders(True, draw_debug)
+		if not opposite_side:
+			return sliders + self.get_sliders(True)
 		else:
 			return sliders
 	
+	def draw_slider(self, slider_n, erase=False):
+		s, sb, r = self.sliders[slider_n]
+		if erase:
+			color1 = color2 = COLORS['black']
+		else:
+			color1, color2 = COLORS['green'], COLORS['mid_grey']
+		pygame.draw.rect(self.screen, color1, s)
+		pygame.draw.rect(self.screen, color2, sb, border_radius=r)
+	
 	def draw_sliders(self):
-		for s, sb, radius in self.sliders:
-			pygame.draw.rect(self.screen, COLORS['green'], s)
-			pygame.draw.rect(self.screen, COLORS['mid_grey'], sb, border_radius=radius)
-		
-		if not self.custom_menu_visible:
+		for i in range(len(self.sliders)):
+			self.draw_slider(i)
+		if not self.custom_settings_visible:
 			pygame.draw.rect(self.screen, COLORS['black'], self.custom_slider_box)
 
 	def in_range_2d(self, p, rangeX, rangeY):
 		return p[0] in rangeX and p[1] in rangeY
 
+	def in_range_pythag(self, p1, p2, h_limit):
+		(x1,y1), (x2,y2) = p1, p2
+
+		# distance formula
+		return (( (x2-x1)**2 + (y2-y1)**2 )**(1/2)) < h_limit
+	
 	def render_everything(self):	
 		# draw buttons
 		self.draw_buttons()
@@ -164,7 +178,8 @@ class MenuGUI():
 	def run(self):
 		# main stuff
 		c_xrange, c_yrange = self.get_c_ranges()
-		
+		last_click = None
+		mouse_on_sb = -1
 		while True:
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:
@@ -172,19 +187,32 @@ class MenuGUI():
 				
 				if event.type == pygame.WINDOWRESIZED:
 					new_w, new_h = event.x, event.y
-					self.__init__(new_w, new_h)
+					self.__init__(new_w, new_h, self.custom_settings_visible)
 					c_xrange, c_yrange = self.get_c_ranges()
-					if self.custom_settings_visible:
-						self.render_sliders(c_sliders, True)
+
+				if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+					for i, (s, sb, r) in enumerate(self.sliders):
+						if self.in_range_pythag(event.pos, sb.center, r):
+							mouse_on_sb = i
+							break
 
 				if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.in_range_2d(event.pos, c_xrange, c_yrange):
-					if not c_settings_visible :
-						self.render_sliders(c_sliders, True)
+					self.custom_settings_visible = not self.custom_settings_visible
+					if self.custom_settings_visible:
+						self.draw_sliders()
 					else:
-						pygame.draw.rect(self.screen, COLORS['black'], c_sliders)
-					pygame.display.update(c_sliders)
-					c_settings_visible  = not c_settings_visible 
+						pygame.draw.rect(self.screen, COLORS['black'], self.custom_slider_box)
+					pygame.display.update(self.custom_slider_box)
 
+				if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+					mouse_on_sb = -1
+
+				if mouse_on_sb != -1 and event.type == pygame.MOUSEMOTION:
+					self.draw_slider(i, erase=True)
+					px = min(max(s.x, event.pos[0]), s.midright[0])
+					sb.centerx = px
+					self.draw_slider(i)
+					pygame.display.update(sb)
 
 class GridGUI():
 	def __init__(self, g: Grid, screen_length, const_border):
