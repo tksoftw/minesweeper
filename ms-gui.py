@@ -26,7 +26,7 @@ class MenuGUI():
 		
 		self.font_multiplier = self.get_px_to_pt_multiplier()
 
-		self.draw_debug = True
+		self.debug_boxes = {}
 
 		self.buttons = self.get_buttons()
 		self.sliders = self.get_sliders()
@@ -38,24 +38,24 @@ class MenuGUI():
 		self.render_everything()
 	
 	def get_px_to_pt_multiplier(self, test_str='O'):
-			# x -> font pt, y -> font px
-			y1 = 10
-			f1 = pygame.font.Font(pygame.font.get_default_font(), y1)
-			x1 = f1.size(test_str)[0]
-			y2 = 100
-			f2 = pygame.font.Font(pygame.font.get_default_font(), y2)
-			x2 = f2.size(test_str)[0]
-			return (x1/y1 + x2/y2)/2
-	
+		# x -> font pt, y -> font px
+		y1 = 10
+		f1 = pygame.font.Font(pygame.font.get_default_font(), y1)
+		x1 = f1.size(test_str)[0]
+		y2 = 100
+		f2 = pygame.font.Font(pygame.font.get_default_font(), y2)
+		x2 = f2.size(test_str)[0]
+		return (x1/y1 + x2/y2)/2
+
 	def get_midpoints(self, l, r, splits=1, cur_depth=0):
-			midpoint = (l + r) / 2
-			if cur_depth == splits:
-				return [midpoint]
-			
-			l_midpoint = self.get_midpoints(l, midpoint, splits, cur_depth+1)
-			r_midpoint = self.get_midpoints(midpoint, r, splits, cur_depth+1)
-			return l_midpoint + r_midpoint
+		midpoint = (l + r) / 2
+		if cur_depth == splits:
+			return [midpoint]
 		
+		l_midpoint = self.get_midpoints(l, midpoint, splits, cur_depth+1)
+		r_midpoint = self.get_midpoints(midpoint, r, splits, cur_depth+1)
+		return l_midpoint + r_midpoint
+	
 
 	def get_buttons(self):
 		button_count = 4
@@ -97,15 +97,15 @@ class MenuGUI():
 		slider_count = 2
 		sliders = []
 		mps = self.get_midpoints(sc2.y, sc2.y+sc2.h, 1)
-		debug_rects_sc3 = []
-		debug_rects_sc4 = []
+		debug_sc3s = []
+		debug_sc4s = []
 		for ymid in mps:
 			sc3 = pygame.Rect(0,0, self.inner_box.w/2.25, self.inner_box.h/5)
 			if opposite_side:
 				sc3.midright = self.buttons[-1].midright[0], ymid
 			else:
 				sc3.midleft = self.buttons[0].x, ymid
-			debug_rects_sc3.append(sc3)
+			debug_sc3s.append(sc3)
 
 			inner_mps = self.get_midpoints(sc3.y, sc3.y+sc3.h, 1)
 			for i, inner_ymid in enumerate(inner_mps):
@@ -114,7 +114,7 @@ class MenuGUI():
 					sc4.center = self.buttons[-1].centerx, inner_ymid
 				else:
 					sc4.midleft = self.buttons[0].x, inner_ymid
-				debug_rects_sc4.append(sc4)
+				debug_sc4s.append(sc4)
 				
 				if (i+1) % 2 == 0:
 					s = pygame.Rect(0,0, sc4.w/1.25, sc4.h/16)
@@ -122,35 +122,47 @@ class MenuGUI():
 					sb = pygame.Rect(0,0, sc4.h/2.5, sc4.h/2.5)
 					sb.center = s.midleft
 					radius = int(sc4.h//2)
-					sliders.append((s, sb, radius))
+					sliders.append((s, sb, radius))		
 		
-		if self.draw_debug:
-			pygame.draw.rect(self.screen, COLORS['grey'], slider_container, 2)
-			pygame.draw.rect(self.screen, COLORS['light_grey'], sc2, 2)
-			for sc3 in debug_rects_sc3:
-				pygame.draw.rect(self.screen, COLORS['blue'], sc3, 2)
-			for sc4 in debug_rects_sc4:	
-				pygame.draw.rect(self.screen, COLORS['purple'], sc4, 2)
-		
+		to_add_debug = (slider_container, sc2, debug_sc3s, debug_sc4s)
 		if not opposite_side:
+			self.debug_boxes['sliders'] = []
+			self.debug_boxes['sliders'].append(to_add_debug)
 			return sliders + self.get_sliders(True)
-		else:
+		else:	
+			self.debug_boxes['sliders'].append(to_add_debug)
 			return sliders
 	
-	def draw_slider(self, slider_n, erase=False):
-		s, sb, r = self.sliders[slider_n]
-		if erase:
-			color1 = color2 = COLORS['black']
-		else:
+	def draw_slider(self, n, erase=False):
+		s, sb, r = self.sliders[n]
+		if not erase:
 			color1, color2 = COLORS['green'], COLORS['mid_grey']
-		pygame.draw.rect(self.screen, color1, s)
-		pygame.draw.rect(self.screen, color2, sb, border_radius=r)
+			pygame.draw.rect(self.screen, color1, s)
+			pygame.draw.rect(self.screen, color2, sb, border_radius=r)
+		else:
+			container = pygame.Rect(s)
+			container.h += sb.h
+			container.w += sb.w
+			container.midleft = s.topleft
+			container.x -= sb.w/2
+			pygame.draw.rect(self.screen, COLORS['black'], container)
 	
-	def draw_sliders(self):
+	def draw_sliders(self, debug=False):
 		for i in range(len(self.sliders)):
 			self.draw_slider(i)
 		if not self.custom_settings_visible:
 			pygame.draw.rect(self.screen, COLORS['black'], self.custom_slider_box)
+		if debug:
+			for i in range(2):
+				slider_container, sc2, dsc3, dsc4 = self.debug_boxes['sliders'][i]
+				pygame.draw.rect(self.screen, COLORS['grey'], slider_container, 2)
+				pygame.draw.rect(self.screen, COLORS['light_grey'], sc2, 2)
+				for sc3 in dsc3:
+					pygame.draw.rect(self.screen, COLORS['blue'], sc3, 2)
+				for sc4 in dsc4:	
+					pygame.draw.rect(self.screen, COLORS['purple'], sc4, 2)
+
+
 
 	def in_range_2d(self, p, rangeX, rangeY):
 		return p[0] in rangeX and p[1] in rangeY
@@ -166,18 +178,15 @@ class MenuGUI():
 		self.draw_buttons()
 		
 		# render sliders
-		self.draw_sliders()
+		self.draw_sliders(True)
 
 		pygame.display.update()
 	
-	def get_c_ranges(self):
-		c_xrange = range(self.buttons[-1].x, self.buttons[-1].x+self.buttons[-1].w)
-		c_yrange = range(self.buttons[-1].y, self.buttons[-1].y+self.buttons[-1].h)
-		return c_xrange, c_yrange
+	def get_bar_percent(self, px, bar_min, bar_max):
+		return bar_max-px/100
 
 	def run(self):
 		# main stuff
-		c_xrange, c_yrange = self.get_c_ranges()
 		last_click = None
 		mouse_on_sb = -1
 		while True:
@@ -188,7 +197,6 @@ class MenuGUI():
 				if event.type == pygame.WINDOWRESIZED:
 					new_w, new_h = event.x, event.y
 					self.__init__(new_w, new_h, self.custom_settings_visible)
-					c_xrange, c_yrange = self.get_c_ranges()
 
 				if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
 					for i, (s, sb, r) in enumerate(self.sliders):
@@ -196,10 +204,10 @@ class MenuGUI():
 							mouse_on_sb = i
 							break
 
-				if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.in_range_2d(event.pos, c_xrange, c_yrange):
+				if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.buttons[-1].collidepoint(event.pos): 
 					self.custom_settings_visible = not self.custom_settings_visible
 					if self.custom_settings_visible:
-						self.draw_sliders()
+						self.draw_sliders(True)
 					else:
 						pygame.draw.rect(self.screen, COLORS['black'], self.custom_slider_box)
 					pygame.display.update(self.custom_slider_box)
@@ -210,6 +218,7 @@ class MenuGUI():
 				if mouse_on_sb != -1 and event.type == pygame.MOUSEMOTION:
 					self.draw_slider(i, erase=True)
 					px = min(max(s.x, event.pos[0]), s.midright[0])
+					print(self.get_bar_percent(px, s.right))
 					sb.centerx = px
 					self.draw_slider(i)
 					pygame.display.update(sb)
