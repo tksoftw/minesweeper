@@ -182,13 +182,17 @@ class MenuGUI():
 
 		pygame.display.update()
 	
-	def get_bar_percent(self, px, bar_min, bar_max):
-		return bar_max-px/100
+	def get_bar_percent(self, slider):
+		s, sb, _ = slider
+		px, bar_min, bar_max = sb.centerx, s.x, s.right
+		max_d = bar_max - bar_min
+		d = bar_max-px
+		return (1-d/max_d)*100
 
 	def run(self):
 		# main stuff
 		last_click = None
-		mouse_on_sb = -1
+		hovered_sb_num = -1
 		while True:
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:
@@ -201,7 +205,7 @@ class MenuGUI():
 				if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
 					for i, (s, sb, r) in enumerate(self.sliders):
 						if self.in_range_pythag(event.pos, sb.center, r):
-							mouse_on_sb = i
+							hovered_sb_num = i
 							break
 
 				if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.buttons[-1].collidepoint(event.pos): 
@@ -213,15 +217,19 @@ class MenuGUI():
 					pygame.display.update(self.custom_slider_box)
 
 				if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-					mouse_on_sb = -1
+					hovered_sb_num = -1
 
-				if mouse_on_sb != -1 and event.type == pygame.MOUSEMOTION:
-					self.draw_slider(i, erase=True)
-					px = min(max(s.x, event.pos[0]), s.midright[0])
-					print(self.get_bar_percent(px, s.right))
-					sb.centerx = px
-					self.draw_slider(i)
-					pygame.display.update(sb)
+				if hovered_sb_num != -1 and event.type == pygame.MOUSEMOTION:
+					print('SLIDERS:', self.sliders)
+					sl = self.sliders[hovered_sb_num]
+					print('SL,', sl)
+					if (self.get_bar_percent(sl) != 100.0) or (event.pos[0] in range(sl[0].x, sl[0].right+1)):
+						new_center = min(max(event.pos[0], sl[0].right), sl[0].x)
+						self.draw_slider(i, erase=True)
+						sb.centerx = new_center
+						self.draw_slider(i)	
+						print(self.get_bar_percent(sl))
+						pygame.display.update(sb)
 
 class GridGUI():
 	def __init__(self, g: Grid, screen_length, const_border):
