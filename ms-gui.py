@@ -137,7 +137,9 @@ class MenuGUI():
 		s, sb, r = self.sliders[n]
 		if not erase:
 			color1, color2 = COLORS['green'], COLORS['mid_grey']
-			pygame.draw.rect(self.screen, color1, s)
+			cont = pygame.Rect(s)
+			cont.h *= 2
+			pygame.draw.rect(self.screen, color1, cont)
 			pygame.draw.rect(self.screen, color2, sb, border_radius=r)
 		else:
 			container = pygame.Rect(s)
@@ -145,6 +147,8 @@ class MenuGUI():
 			container.w += sb.w
 			container.midleft = s.topleft
 			container.x -= sb.w/2
+			
+
 			pygame.draw.rect(self.screen, COLORS['black'], container)
 	
 	def draw_sliders(self, debug=False):
@@ -193,7 +197,9 @@ class MenuGUI():
 		# main stuff
 		last_click = None
 		hovered_sb_num = -1
+		clock = pygame.time.Clock()
 		while True:
+			clock.tick(0)	
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:
 					return False
@@ -220,16 +226,16 @@ class MenuGUI():
 					hovered_sb_num = -1
 
 				if hovered_sb_num != -1 and event.type == pygame.MOUSEMOTION:
-					print('SLIDERS:', self.sliders)
 					sl = self.sliders[hovered_sb_num]
-					print('SL,', sl)
 					if (self.get_bar_percent(sl) != 100.0) or (event.pos[0] in range(sl[0].x, sl[0].right+1)):
-						new_center = min(max(event.pos[0], sl[0].right), sl[0].x)
+						new_center = min(max(event.pos[0], sl[0].x), sl[0].right)
+						print('new center', new_center)
 						self.draw_slider(i, erase=True)
 						sb.centerx = new_center
 						self.draw_slider(i)	
 						print(self.get_bar_percent(sl))
 						pygame.display.update(sb)
+
 
 class GridGUI():
 	def __init__(self, g: Grid, screen_length, const_border):
