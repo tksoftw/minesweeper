@@ -141,7 +141,7 @@ class MenuGUI():
 		s_cont.w += sb.w
 		s_cont.h += sb.h
 		s_cont.midleft = s.topleft	
-		s_cont.x -= sb.w/2	
+		s_cont.x -= sb.w//2	
 
 		pygame.draw.rect(self.screen, color3, s_cont)
 		sb.centerx = new_centerx
