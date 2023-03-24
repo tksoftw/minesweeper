@@ -133,7 +133,7 @@ class MenuGUI():
 			self.debug_boxes['sliders'].append(to_add_debug)
 			return sliders
 
-	def update_slider_ball(self, n, new_centerx):
+	def update_slider_ball(self, n, cursor_pos):
 		s, sb, r = self.sliders[n]
 		color1, color2, color3 = COLORS['green'], COLORS['mid_grey'], COLORS['black']	
 		
@@ -144,6 +144,7 @@ class MenuGUI():
 		s_cont.x -= sb.w//2	
 
 		pygame.draw.rect(self.screen, color3, s_cont)
+		new_centerx = min(max(cursor_pos[0], s.x), s.right) # ensure sliderball doesn't go out of range
 		sb.centerx = new_centerx
 		pygame.draw.rect(self.screen, color1, s)
 		pygame.draw.rect(self.screen, color2, sb, border_radius=r)
@@ -170,7 +171,20 @@ class MenuGUI():
 				for sc4 in dsc4:	
 					pygame.draw.rect(self.screen, COLORS['purple'], sc4, 2)
 
+	def in_range_rect(self, r, p, allowed_error=0):
+		x_begin, y_begin = r.x, r.y
+		x_end, y_end = r.x+r.w, r.y+r.h
+		print(x_begin, x_end, y_begin, y_end)
 
+		offset_values = [x+((-1)**(i+1))*int(x*allowed_error) for i, x in enumerate([x_begin, x_end, y_begin, y_end])]
+		x_begin, x_end, y_begin, y_end = offset_values
+		
+		print(x_begin, x_end, y_begin, y_end)
+		print(p)
+
+		r_xrange = range(x_begin, x_end)
+		r_yrange = range(y_begin, y_end)
+		return self.in_range_2d(p, r_xrange, r_yrange)
 
 	def in_range_2d(self, p, rangeX, rangeY):
 		return p[0] in rangeX and p[1] in rangeY
@@ -181,7 +195,7 @@ class MenuGUI():
 		# distance formula
 		return (( (x2-x1)**2 + (y2-y1)**2 )**(1/2)) < h_limit
 	
-	def render_everything(self):	
+	def render_everything(self):
 		# draw buttons
 		self.draw_buttons()
 		
@@ -212,19 +226,26 @@ class MenuGUI():
 					new_w, new_h = event.x, event.y
 					self.__init__(new_w, new_h, self.custom_settings_visible)
 
-				if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-					for i, (s, sb, r) in enumerate(self.sliders):
-						if self.in_range_pythag(event.pos, sb.center, r):
-							hovered_sb_num = i
-							break
+				if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1: # click
+					if self.buttons[-1].collidepoint(event.pos): # click on button
+						self.custom_settings_visible = not self.custom_settings_visible
+						if self.custom_settings_visible:
+							self.draw_sliders(debug=True)
+						else:
+							pygame.draw.rect(self.screen, COLORS['black'], self.custom_slider_box)
+						pygame.display.update(self.custom_slider_box)
 
-				if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.buttons[-1].collidepoint(event.pos): 
-					self.custom_settings_visible = not self.custom_settings_visible
-					if self.custom_settings_visible:
-						self.draw_sliders(debug=True)
-					else:
-						pygame.draw.rect(self.screen, COLORS['black'], self.custom_slider_box)
-					pygame.display.update(self.custom_slider_box)
+					else: # click on slider
+						for i, (s, sb, r) in enumerate(self.sliders):	
+							if self.in_range_pythag(event.pos, sb.center, r):
+								hovered_sb_num = i
+								break
+							elif self.in_range_rect(s, event.pos, allowed_error=0.1):
+								eraser = self.update_slider_ball(i, event.pos)
+								pygame.display.update([s, sb, eraser])
+								hovered_sb_num = i
+								break
+
 
 				if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
 					hovered_sb_num = -1
@@ -235,7 +256,7 @@ class MenuGUI():
 						print(sl[0].size, sl[0].center)
 						new_center = min(max(event.pos[0], sl[0].x), sl[0].right)
 						print('new center', new_center)
-						eraser = self.update_slider_ball(i, new_center)
+						eraser = self.update_slider_ball(i, event.pos)
 						print(self.get_bar_percent(sl))
 						pygame.display.update([s, sb, eraser])
 
