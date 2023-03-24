@@ -132,24 +132,28 @@ class MenuGUI():
 		else:	
 			self.debug_boxes['sliders'].append(to_add_debug)
 			return sliders
-	
-	def draw_slider(self, n, erase=False):
-		s, sb, r = self.sliders[n]
-		if not erase:
-			color1, color2 = COLORS['green'], COLORS['mid_grey']
-			cont = pygame.Rect(s)
-			cont.h *= 2
-			pygame.draw.rect(self.screen, color1, cont)
-			pygame.draw.rect(self.screen, color2, sb, border_radius=r)
-		else:
-			container = pygame.Rect(s)
-			container.h += sb.h
-			container.w += sb.w
-			container.midleft = s.topleft
-			container.x -= sb.w/2
-			
 
-			pygame.draw.rect(self.screen, COLORS['black'], container)
+	def update_slider_ball(self, n, new_centerx):
+		s, sb, r = self.sliders[n]
+		color1, color2, color3 = COLORS['green'], COLORS['mid_grey'], COLORS['black']	
+		
+		s_cont = pygame.Rect(s)
+		s_cont.w += sb.w
+		s_cont.h += sb.h
+		s_cont.midleft = s.topleft	
+		s_cont.x -= sb.w/2	
+
+		pygame.draw.rect(self.screen, color3, s_cont)
+		sb.centerx = new_centerx
+		pygame.draw.rect(self.screen, color1, s)
+		pygame.draw.rect(self.screen, color2, sb, border_radius=r)
+		return s_cont
+
+	def draw_slider(self, n):
+		s, sb, r = self.sliders[n]
+		color1, color2 = COLORS['green'], COLORS['mid_grey']
+		pygame.draw.rect(self.screen, color1, s)
+		pygame.draw.rect(self.screen, color2, sb, border_radius=r)
 	
 	def draw_sliders(self, debug=False):
 		for i in range(len(self.sliders)):
@@ -217,7 +221,7 @@ class MenuGUI():
 				if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.buttons[-1].collidepoint(event.pos): 
 					self.custom_settings_visible = not self.custom_settings_visible
 					if self.custom_settings_visible:
-						self.draw_sliders(True)
+						self.draw_sliders(debug=True)
 					else:
 						pygame.draw.rect(self.screen, COLORS['black'], self.custom_slider_box)
 					pygame.display.update(self.custom_slider_box)
@@ -228,13 +232,12 @@ class MenuGUI():
 				if hovered_sb_num != -1 and event.type == pygame.MOUSEMOTION:
 					sl = self.sliders[hovered_sb_num]
 					if (self.get_bar_percent(sl) != 100.0) or (event.pos[0] in range(sl[0].x, sl[0].right+1)):
+						print(sl[0].size, sl[0].center)
 						new_center = min(max(event.pos[0], sl[0].x), sl[0].right)
 						print('new center', new_center)
-						self.draw_slider(i, erase=True)
-						sb.centerx = new_center
-						self.draw_slider(i)	
+						eraser = self.update_slider_ball(i, new_center)
 						print(self.get_bar_percent(sl))
-						pygame.display.update(sb)
+						pygame.display.update([s, sb, eraser])
 
 
 class GridGUI():
