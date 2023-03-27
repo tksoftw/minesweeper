@@ -172,19 +172,24 @@ class MenuGUI():
 					pygame.draw.rect(self.screen, COLORS['purple'], sc4, 2)
 
 	def in_range_rect(self, r, p, allowed_error=0):
+		print(r)
 		x_begin, y_begin = r.x, r.y
 		x_end, y_end = r.x+r.w, r.y+r.h
-		print(x_begin, x_end, y_begin, y_end)
 
 		offset_values = [x+((-1)**(i+1))*int(x*allowed_error) for i, x in enumerate([x_begin, x_end, y_begin, y_end])]
 		x_begin, x_end, y_begin, y_end = offset_values
 		
-		print(x_begin, x_end, y_begin, y_end)
-		print(p)
+		#print(x_begin, x_end, y_begin, y_end)
+		#print(p)
 
 		r_xrange = range(x_begin, x_end)
 		r_yrange = range(y_begin, y_end)
-		return self.in_range_2d(p, r_xrange, r_yrange)
+		if self.in_range_2d(p, r_xrange, r_yrange):
+			print(p, r_xrange, r_yrange)
+			r2 = pygame.Rect(x_begin, y_begin, x_end-x_begin, y_end-y_begin)
+			print(r)
+			print(r2)
+			return r2
 
 	def in_range_2d(self, p, rangeX, rangeY):
 		return p[0] in rangeX and p[1] in rangeY
@@ -240,8 +245,12 @@ class MenuGUI():
 							if self.in_range_pythag(event.pos, sb.center, r):
 								hovered_sb_num = i
 								break
-							elif self.in_range_rect(s, event.pos, allowed_error=0.1):
-								eraser = self.update_slider_ball(i, event.pos)
+							elif (debug_box := self.in_range_rect(s, event.pos, allowed_error=0.1)) is not None:
+								print('db', debug_box)
+								pygame.draw.rect(self.screen, COLORS['red'], debug_box, 2)
+								pygame.display.update()
+								time.sleep(.1)
+								eraser = self.update_slider_ball(i, event.pos)	
 								pygame.display.update([s, sb, eraser])
 								hovered_sb_num = i
 								break
