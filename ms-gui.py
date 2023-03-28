@@ -27,14 +27,12 @@ class MenuGUI():
 		standard_box_dims = self.inner_box.w/4, self.inner_box.h/5
 		C = 1.5*(standard_box_dims[0]+standard_box_dims[1])/(self.inner_box.w+self.inner_box.h)
 		pt = int((standard_box_dims[0]+standard_box_dims[1])/2*self.get_px_to_pt_multiplier()*C)
-		self.button_font = pygame.font.Font(pygame.font.get_default_font(), pt)
-		
-		self.slider_radius = None
+		self.button_font = pygame.font.Font(pygame.font.get_default_font(), pt) 
 		
 		self.debug_boxes = {}
 
 		self.buttons = self.get_buttons()
-		self.sliders = self.get_sliders()
+		self.slider_ball_radius, self.sliders = self.get_sliders()
 
 		self.custom_settings_box = None
 		self.custom_settings_visible = c_visible
@@ -100,6 +98,7 @@ class MenuGUI():
 		mps = self.get_midpoints(sc2.y, sc2.y+sc2.h, 1)
 		debug_sc3s = []
 		debug_sc4s = []
+		radius = None
 		for ymid in mps:
 			sc3 = pygame.Rect(0,0, self.inner_box.w/2.25, self.inner_box.h/5)
 			if opposite_side:
@@ -111,59 +110,62 @@ class MenuGUI():
 			inner_mps = self.get_midpoints(sc3.y, sc3.y+sc3.h, 1)
 			for i, inner_ymid in enumerate(inner_mps):
 				sc4 = pygame.Rect(0,0, sc3.w/2, sc3.h/1.70)
+				radius = sc4.h//2
 				if opposite_side:
 					sc4.center = self.buttons[-1].centerx, inner_ymid
 				else:
 					sc4.midleft = self.buttons[0].x, inner_ymid
 				debug_sc4s.append(sc4)
 				
-				if (i+1) % 2 == 0:
+				if i % 2 == 0: # even
+					# setup text
+					message = str(i*2)
+					sliders.append((message, sc4))
+				else:
+					# setup rect
 					s = pygame.Rect(0,0, sc4.w/1.25, sc4.h/16)
 					s.center = sc4.center
 					sb = pygame.Rect(0,0, sc4.h/2.5, sc4.h/2.5)
 					sb.center = s.midleft
 					self.slider_radius = int(sc4.h//2)
-					sliders.append((s, sb, 0))
-				else:
-					# draw text
-					text = self.button_font.render('e', True, COLORS['white'])
-					aligner = text.get_rect(center=(sc4.center))
-					self.screen.blit(text, aligner)
-					
+					sliders[-1] = (s, sb) + sliders[-1]
+
 		
 		to_add_debug = (slider_container, sc2, debug_sc3s, debug_sc4s)
 		if not opposite_side:
 			self.debug_boxes['sliders'] = []
 			self.debug_boxes['sliders'].append(to_add_debug)
-			return sliders + self.get_sliders(True)
+			return radius, (sliders + self.get_sliders(True))
 		else:	
 			self.debug_boxes['sliders'].append(to_add_debug)
 			return sliders
 
-	def update_slider_ball(self, n, new_ball_pos):
-		s, sb, r = self.sliders[n]
-		color1, color2, color3 = COLORS['green'], COLORS['mid_grey'], COLORS['black']	
+	def update_slider(self, n, new_ball_pos):
+		s, sb, message, message_cont= self.sliders[n]
 		
-		s_cont = pygame.Rect(s)
-		s_cont.w += sb.w
-		s_cont.h += sb.h
-		s_cont.midleft = s.topleft	
-		s_cont.x -= sb.w//2	
-
-		pygame.draw.rect(self.screen, color3, s_cont)
+		sl_cont = pygame.Rect(s)
+		sl_cont.w += sb.w*2
+		sl_cont.h += message_cont.h*2
+		sl_cont.topleft = message_cont.topleft
+		sl_cont.y -= s.h
+		
+		pygame.draw.rect(self.screen, COLORS['black'], sl_cont)
 		new_centerx = min(max(new_ball_pos[0], s.x), s.right) # ensure sliderball doesn't go out of range
-		sb.centerx = new_centerx
-		pygame.draw.rect(self.screen, color1, s)
-		pygame.draw.rect(self.screen, color2, sb, border_radius=r)
-		
-		return s_cont
+		self.sliders[n][1].centerx = new_centerx # slider ball
+		self.draw_slider(n)
+		return sl_cont
 
 	def draw_slider(self, n):
-		s, sb, r = self.sliders[n]
-		color1, color2 = COLORS['green'], COLORS['mid_grey']
+		s, sb, message, message_cont = self.sliders[n]
+		color1, color2, color3 = COLORS['green'], COLORS['mid_grey'], COLORS['white']
 		pygame.draw.rect(self.screen, color1, s)
-		pygame.draw.rect(self.screen, color2, sb, border_radius=r)
-	
+		pygame.draw.rect(self.screen, color2, sb, border_radius=self.slider_ball_radius)
+		
+		current_percent = self.get_bar_percent(n, round_digits=1)
+		text = self.button_font.render(f'{message}: {current_percent}', True, color3)
+		aligner = text.get_rect(center=message_cont.center)
+		self.screen.blit(text, aligner)
+
 	def draw_sliders(self, debug=False):
 		for i in range(len(self.sliders)):
 			self.draw_slider(i)
@@ -203,7 +205,7 @@ class MenuGUI():
 		return (( (x2-x1)**2 + (y2-y1)**2 )**(1/2)) < h_limit
 	
 	def slider_clicked(self, p, allowed_error=0):
-		for i, (s, sb, r) in enumerate(self.sliders):
+		for i, (s, sb, *_) in enumerate(self.sliders):
 			if self.in_range_rect(s, p, allowed_error):
 				return i
 		return None
@@ -217,12 +219,12 @@ class MenuGUI():
 
 		pygame.display.update()
 	
-	def get_bar_percent(self, slider):
-		s, sb, _ = slider
+	def get_bar_percent(self, s_n, round_digits=0):
+		s, sb, *_ = self.sliders[s_n]
 		px, bar_min, bar_max = sb.centerx, s.x, s.right
 		max_d = bar_max - bar_min
 		d = bar_max-px
-		return (1-d/max_d)*100
+		return round((1-d/max_d)*100, round_digits)
 
 	def run(self):
 		# main stuff
@@ -248,8 +250,8 @@ class MenuGUI():
 							pygame.draw.rect(self.screen, COLORS['black'], self.custom_slider_box)
 						pygame.display.update(self.custom_slider_box)
 					elif (sl_ind := self.slider_clicked(event.pos, allowed_error=0.1)) is not None: # click on slider
-						s, sb, _ = self.sliders[sl_ind]
-						eraser = self.update_slider_ball(sl_ind, event.pos)	
+						s, sb, *_ = self.sliders[sl_ind]
+						eraser = self.update_slider(sl_ind, event.pos)	
 						pygame.display.update([sb, s, eraser])
 						hovered_sb_num = sl_ind
 
@@ -259,8 +261,8 @@ class MenuGUI():
 
 				if hovered_sb_num != -1 and event.type == pygame.MOUSEMOTION:
 					sl = self.sliders[hovered_sb_num]
-					if (self.get_bar_percent(sl) != 100.0) or (event.pos[0] in range(sl[0].x, sl[0].right+1)):
-						eraser = self.update_slider_ball(hovered_sb_num, event.pos)
+					if (self.get_bar_percent(hovered_sb_num) != 100.0) or (event.pos[0] in range(sl[0].x, sl[0].right+1)):
+						eraser = self.update_slider(hovered_sb_num, event.pos)
 						pygame.display.update([sb, s, eraser])
 
 
