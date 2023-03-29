@@ -34,7 +34,6 @@ class MenuGUI():
 		self.start_button = self.get_start_button()
 		self.slider_ball_radius, self.sliders = self.get_sliders(bar_percents=bar_ps)
 
-		self.custom_settings_box = None
 		self.custom_settings_visible = c_visible
 
 		# render rectangles
@@ -187,8 +186,9 @@ class MenuGUI():
 					pygame.draw.rect(self.screen, COLORS['blue'], sc3, 2)
 				for sc4 in dsc4:	
 					pygame.draw.rect(self.screen, COLORS['purple'], sc4, 2)
-	
-	def update_slider(self, n, new_ball_pos):
+
+
+	def hide_slider(self, n):
 		s, sb, message, message_cont, old_percent = self.sliders[n]
 		
 		sl_cont = pygame.Rect(s)
@@ -196,15 +196,21 @@ class MenuGUI():
 		sl_cont.h += message_cont.h*2
 		sl_cont.midleft = s.x-sb.w//2, (message_cont.centery+s.centery)/2
 		sl_cont.y -= s.h
-		
+
 		pygame.draw.rect(self.screen, COLORS['black'], sl_cont)
+		return sl_cont
+
+	def update_slider(self, n, new_ball_pos):
+		s, sb, message, message_cont, old_percent = self.sliders[n]
+		
+		eraser = self.hide_slider(n)
 		new_centerx = min(max(new_ball_pos[0], s.x), s.right) # ensure sliderball doesn't go out of range
 		self.sliders[n][1].centerx = new_centerx # slider ball
 		percent = self.get_bar_percent(n)
 		self.sliders[n] = self.sliders[n][:-1] + (percent,)
 
 		self.draw_slider(n)
-		return sl_cont
+		return eraser
 
 	def in_range_rect(self, r, p, allowed_error=0):
 		# make copy
@@ -240,7 +246,7 @@ class MenuGUI():
 		self.draw_buttons()
 		
 		# draw sliders
-		self.draw_sliders(True)
+		self.draw_sliders(debug=False)#True)
 		
 		# draw start button
 		self.draw_start_button()
@@ -263,14 +269,19 @@ class MenuGUI():
 
 	def toggle_custom_settings(self):
 		self.custom_settings_visible = not self.custom_settings_visible
+		update_list = []
 		if not self.custom_settings_visible:
-			pygame.draw.rect(self.screen, COLORS['black'], self.custom_slider_box)
+			update_list.extend([self.hide_slider(-i) for i in range(1,3)])
 		else:
-			# reset slider positions
 			for i in range(1, 3):
+				# reset slider positions
 				self.sliders[-i] = self.sliders[-i][:-1] + (50,) # update percent
 				self.update_centerx_from_percent(self.sliders[-i]) # update centerx
-			self.draw_sliders(debug=True)
+				self.draw_slider(-i)
+				to_add = list(self.sliders[-i][:2])+[self.sliders[-i][-1]]
+				update_list.extend(to_add)
+
+		return update_list
 	
 	def run(self):
 		# main stuff
@@ -292,6 +303,8 @@ class MenuGUI():
 						self.toggle_custom_settings()
 						pygame.display.update(self.custom_slider_box)
 					elif (sl_ind := self.slider_clicked(event.pos, allowed_error=0.1)) is not None: # click on slider
+						if sl_ind >= 2 and not self.custom_settings_visible:
+							continue
 						s, sb, *_ = self.sliders[sl_ind]
 						eraser = self.update_slider(sl_ind, event.pos)	
 						pygame.display.update([sb, s, eraser])
