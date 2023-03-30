@@ -28,14 +28,20 @@ class MenuGUI():
 		C = 1.5*(standard_box_dims[0]+standard_box_dims[1])/(self.inner_box.w+self.inner_box.h)
 		pt = int((standard_box_dims[0]+standard_box_dims[1])/2*self.get_px_to_pt_multiplier()*C)
 		self.button_font = pygame.font.Font(pygame.font.get_default_font(), pt) 
-		
+		self.slider_font = pygame.font.Font(pygame.font.get_default_font(), pt//2)
+
 		self.debug_boxes = {}
 		self.buttons = self.get_buttons()
 		self.start_button = self.get_start_button()
 		self.slider_ball_radius, self.sliders = self.get_sliders(bar_percents=bar_ps)
 
 		self.custom_settings_visible = c_visible
-
+		
+		self.slider_ratio_map = {}
+		self.slider_ratio_map[0] = 10
+		self.slider_ratio_map[1] = 0.1
+		self.slider_ratio_map.update({n : 1 for n in range(2, len(self.sliders))})
+		
 		# render rectangles
 		self.render_everything()
 	
@@ -97,7 +103,6 @@ class MenuGUI():
 		aligner = text.get_rect(center=self.start_button.center)
 		self.screen.blit(text, aligner)
 
-
 	def get_sliders(self, opposite_side=False, bar_percents=None):
 		slider_container = pygame.Rect(0,0, self.inner_box.w/2, self.inner_box.bottomleft[1]-self.buttons[0].bottomleft[1])
 		if not opposite_side:
@@ -114,6 +119,7 @@ class MenuGUI():
 		debug_sc3s = []
 		debug_sc4s = []
 		radius = None
+		messages = ['Window size', 'Border length', 'Mine count', 'Tiles per row']
 		for i, ymid in enumerate(mps):
 			sc3 = pygame.Rect(0,0, self.inner_box.w/2.25, self.inner_box.h/5)
 			if opposite_side:
@@ -134,8 +140,9 @@ class MenuGUI():
 				
 				if j % 2 == 0: # even
 					# setup text
-					message = str(j*2)
-					sliders.append((message, sc4, 0))
+					msg_n = len(mps)*int(opposite_side)+i
+					message = messages[msg_n]
+					sliders.append((message, sc4, 50))
 				else:
 					# setup rect
 					s = pygame.Rect(0,0, sc4.w/1.25, sc4.h/16)
@@ -144,6 +151,7 @@ class MenuGUI():
 					sb.center = s.midleft
 					self.slider_radius = int(sc4.h//2)
 					sliders[-1] = (s, sb) + sliders[-1]
+					self.update_centerx_from_percent(sliders[-1])
 		
 
 		if bar_percents is not None:
@@ -167,10 +175,13 @@ class MenuGUI():
 		color2 = color2[:-1] + ((n*50)%255,)
 		pygame.draw.rect(self.screen, color1, s)
 		pygame.draw.rect(self.screen, color2, sb, border_radius=self.slider_ball_radius)
-	
-		text = self.button_font.render(f'{message}: {percent}', True, color3)
+		
+		text = self.slider_font.render(message, True, color3)
+		p_text = self.slider_font.render(str(int(percent*self.slider_ratio_map[n])), True, color3)
 		aligner = text.get_rect(center=message_cont.center)
+		aligner2 = p_text.get_rect(midtop=aligner.midbottom)
 		self.screen.blit(text, aligner)
+		self.screen.blit(p_text, aligner2)
 
 	def draw_sliders(self, debug=False):
 		for i in range(len(self.sliders)):
@@ -199,16 +210,20 @@ class MenuGUI():
 
 		pygame.draw.rect(self.screen, COLORS['black'], sl_cont)
 		return sl_cont
+	
+	def update_slider(self, n, p):
+		self.update_centerx_from_position(n, p)
+		percent = self.get_bar_percent(n)
+		self.update_slider_percent(n, percent)	
+		s, sb, *_ = self.sliders[n]
+		eraser = self.update_slider_drawing(n)
+		return eraser
 
-	def update_slider(self, n, new_ball_pos):
-		s, sb, message, message_cont, old_percent = self.sliders[n]
+
+	def update_slider_drawing(self, n):
+		s, sb, message, message_cont, percent = self.sliders[n]
 		
 		eraser = self.hide_slider(n)
-		new_centerx = min(max(new_ball_pos[0], s.x), s.right) # ensure sliderball doesn't go out of range
-		self.sliders[n][1].centerx = new_centerx # slider ball
-		percent = self.get_bar_percent(n)
-		self.sliders[n] = self.sliders[n][:-1] + (percent,)
-
 		self.draw_slider(n)
 		return eraser
 
@@ -252,20 +267,28 @@ class MenuGUI():
 		self.draw_start_button()
 
 		pygame.display.update()
-	
+
 	def get_bar_percent(self, n):
 		s, sb, *_ = self.sliders[n]
 		px, bar_min, bar_max = sb.centerx, s.x, s.right
 		max_d = bar_max - bar_min
 		d = bar_max-px
-		return round((1-d/max_d)*100) # floor
+		return round((1-d/max_d)*100, 1)
+
+	def update_slider_percent(self, n, new_percent):
+		self.sliders[n] = self.sliders[n][:-1] + (new_percent,)
 
 	def update_centerx_from_percent(self, sl):
 		s, sb, *_, percent = sl
 		bar_min, bar_max = s.x, s.right
 		max_d = bar_max - bar_min
-		x = round(max_d*((percent/100)-1)+bar_max) # algebra
+		x = round(max_d*((percent/100)-1)+bar_max, 1) # algebra
 		sl[1].centerx = x
+	
+	def update_centerx_from_position(self, n, new_ball_pos):	
+		s, sb, *_, percent = self.sliders[n]
+		new_centerx = min(max(new_ball_pos[0], s.x), s.right) # ensure sliderball doesn't go out of range
+		self.sliders[n][1].centerx = new_centerx # slider ball
 
 	def toggle_custom_settings(self):
 		self.custom_settings_visible = not self.custom_settings_visible
@@ -277,7 +300,7 @@ class MenuGUI():
 				# reset slider positions
 				self.sliders[-i] = self.sliders[-i][:-1] + (50,) # update percent
 				self.update_centerx_from_percent(self.sliders[-i]) # update centerx
-				self.draw_slider(-i)
+				self.draw_slider(len(self.sliders)-i)
 				to_add = list(self.sliders[-i][:2])+[self.sliders[-i][-1]]
 				update_list.extend(to_add)
 
@@ -286,6 +309,7 @@ class MenuGUI():
 	def run(self):
 		# main stuff
 		hovered_sb_num = -1
+		prev_click = -1, 0
 		while True:
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:	
@@ -293,7 +317,6 @@ class MenuGUI():
 					return percents
 				
 				if event.type == pygame.WINDOWRESIZED:
-					print('resized!!!!!!!!!!!!!!!!!!!!!!!!')
 					new_w, new_h = event.x, event.y
 					percents = [sl[-1] for sl in self.sliders]
 					self.__init__(new_w, new_h, self.custom_settings_visible, percents)
@@ -305,14 +328,27 @@ class MenuGUI():
 					elif (sl_ind := self.slider_clicked(event.pos, allowed_error=0.1)) is not None: # click on slider
 						if sl_ind >= 2 and not self.custom_settings_visible:
 							continue
+						if self.in_range_pythag(self.sliders[sl_ind][1].center, event.pos, self.slider_ball_radius):
+							if prev_click[0] == sl_ind and prev_click[1] > 0:
+								self.update_slider_percent(sl_ind, 50)
+								self.update_centerx_from_percent(self.sliders[sl_ind])
+							prev_click = sl_ind, prev_click[1]+1
+						else:
+							self.update_centerx_from_position(sl_ind, event.pos)
+							percent = self.get_bar_percent(sl_ind)
+							self.update_slider_percent(sl_ind, percent)	
+
 						s, sb, *_ = self.sliders[sl_ind]
-						eraser = self.update_slider(sl_ind, event.pos)	
+						eraser = self.update_slider_drawing(sl_ind)	
 						pygame.display.update([sb, s, eraser])
 						hovered_sb_num = sl_ind
 
 
 				if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
 					hovered_sb_num = -1
+				
+				if prev_click[0] != -1 and event.type == pygame.MOUSEMOTION:
+					prev_click = -1, 0
 
 				if hovered_sb_num != -1 and event.type == pygame.MOUSEMOTION:
 					sl = self.sliders[hovered_sb_num]
@@ -322,7 +358,7 @@ class MenuGUI():
 
 
 class GridGUI():
-	def __init__(self, g: Grid, screen_length, const_border):
+	def __init__(self, g: Grid, screen_length, const_border=5):
 		self.g = g
 		self.screen_length = screen_length
 		self.row_length = len(g.grid)
@@ -450,7 +486,7 @@ if __name__ == '__main__':
 	print(p)
 
 	g = Grid(25, 50)
-	gui = GridGUI(g, 800, 50)
+	gui = GridGUI(g, 500, 50)
 	gui.draw_grid()
 	gui.play_game()
 	time.sleep(1)
