@@ -84,7 +84,7 @@ class MenuGUI():
 		for i, b in enumerate(self.buttons):
 			if i == self.selected_button:
 				shadow = pygame.Rect(b)
-				shadow.topleft = b.x*.97, b.y*.98
+				shadow.topleft = b.x-b.w*.02, b.y-b.h*.02
 				pygame.draw.rect(self.screen, COLORS['grey'], shadow)
 			# render box
 			pygame.draw.rect(self.screen, COLORS['red'], b)
@@ -92,6 +92,16 @@ class MenuGUI():
 			text = self.button_font.render(messages[i%len(self.buttons)], True, COLORS['white'])
 			aligner = text.get_rect(center=(b.center))
 			self.screen.blit(text, aligner)
+	
+	def change_selected_button(self, new_n):
+		self.selected_button = new_n
+		offset_midleft = (self.inner_box.x, self.buttons[0].centery*0.95)
+		offset_size = (self.inner_box.w, self.buttons[0].h*1.25)
+		eraser = pygame.Rect((0, 0), offset_size)
+		eraser.midleft = offset_midleft
+		pygame.draw.rect(self.screen, COLORS['black'], eraser)
+		self.draw_buttons()
+		return eraser
 
 	def get_start_button(self):
 		a = 15
@@ -262,6 +272,12 @@ class MenuGUI():
 				return i
 		return None
 
+	def button_clicked(self, p):
+		for i, bt in enumerate(self.buttons):   
+			if bt.collidepoint(p):
+				return i
+		return None
+	
 	def render_everything(self):
 		# draw buttons
 		self.draw_buttons()
@@ -312,25 +328,38 @@ class MenuGUI():
 
 		return update_list
 	
+	def toggle_start_button_shadow(self, shown=False):
+		b = self.start_button
+		shadow = pygame.Rect(b)
+		shadow.topleft = b.x-b.w*.01, b.y-b.h*.01
+		color = COLORS['grey'] if shown else COLORS['black']
+		pygame.draw.rect(self.screen, color, shadow)
+		self.draw_start_button()
+		return shadow
+
 	def run(self):
 		# main stuff
 		hovered_sb_num = -1
 		prev_click = -1, 0
+		on_start_button = False
 		while True:
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:	
-					percents = [sl[-1] for sl in self.sliders]
-					return percents
-				
+					return None				
 				if event.type == pygame.WINDOWRESIZED:
 					new_w, new_h = event.x, event.y
 					percents = [sl[-1] for sl in self.sliders]
 					self.__init__(new_w, new_h, self.custom_settings_visible, percents)
 
 				if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1: # click
-					if self.buttons[-1].collidepoint(event.pos): # click on button
-						self.toggle_custom_settings()
-						pygame.display.update(self.custom_slider_box)
+					if (bt_ind := self.button_clicked(event.pos)) is not None and bt_ind != self.selected_button: # click on button
+						prev_bt_ind = self.selected_button
+						eraser = self.change_selected_button(bt_ind)
+						to_update = [eraser]
+						if prev_bt_ind == (len(self.buttons)-1) or bt_ind == (len(self.buttons)-1):
+							self.toggle_custom_settings()
+							to_update.append(self.custom_slider_box)
+						pygame.display.update(to_update)
 					elif (sl_ind := self.slider_clicked(event.pos, allowed_error=0.1)) is not None: # click on slider
 						if sl_ind >= 2 and not self.custom_settings_visible:
 							continue
@@ -348,11 +377,22 @@ class MenuGUI():
 						eraser = self.update_slider_drawing(sl_ind)	
 						pygame.display.update([sb, s, eraser])
 						hovered_sb_num = sl_ind
+					elif self.start_button.collidepoint(event.pos):	
+						on_start_button = True	
+						shadow = self.toggle_start_button_shadow(True)
+						pygame.display.update(shadow)
 
+				if on_start_button and event.type == pygame.MOUSEBUTTONUP and event.button == 1 and self.start_button.collidepoint(event.pos):
+					percents = [sl[-1] for sl in self.sliders]
+					return percents
 
 				if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
 					hovered_sb_num = -1
-				
+					if on_start_button:
+						shadow = self.toggle_start_button_shadow(False)
+						pygame.display.update(shadow)
+					on_start_button = False
+								
 				if prev_click[0] != -1 and event.type == pygame.MOUSEMOTION:
 					prev_click = -1, 0
 
@@ -361,7 +401,8 @@ class MenuGUI():
 					if (self.get_bar_percent(hovered_sb_num) != 100.0) or (event.pos[0] in range(sl[0].x, sl[0].right+1)):
 						eraser = self.update_slider(hovered_sb_num, event.pos)
 						pygame.display.update([sb, s, eraser])
-
+		
+		
 
 class GridGUI():
 	def __init__(self, g: Grid, screen_length, const_border=5):
