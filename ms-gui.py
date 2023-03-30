@@ -31,12 +31,14 @@ class MenuGUI():
 		self.slider_font = pygame.font.Font(pygame.font.get_default_font(), pt//2)
 
 		self.debug_boxes = {}
+
 		self.buttons = self.get_buttons()
 		self.start_button = self.get_start_button()
 		self.slider_ball_radius, self.sliders = self.get_sliders(bar_percents=bar_ps)
 
 		self.custom_settings_visible = c_visible
-		
+		self.selected_button = 0
+
 		self.slider_ratio_map = {}
 		self.slider_ratio_map[0] = 10
 		self.slider_ratio_map[1] = 0.1
@@ -80,8 +82,12 @@ class MenuGUI():
 	def draw_buttons(self):
 		messages = ('Easy', 'Normal', 'Expert', 'Custom')
 		for i, b in enumerate(self.buttons):
+			if i == self.selected_button:
+				shadow = pygame.Rect(b)
+				shadow.topleft = b.x*.97, b.y*.98
+				pygame.draw.rect(self.screen, COLORS['grey'], shadow)
 			# render box
-			pygame.draw.rect(self.screen, COLORS['red'], b, 2)
+			pygame.draw.rect(self.screen, COLORS['red'], b)
 			# draw text
 			text = self.button_font.render(messages[i%len(self.buttons)], True, COLORS['white'])
 			aligner = text.get_rect(center=(b.center))
