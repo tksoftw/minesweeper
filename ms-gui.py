@@ -50,7 +50,7 @@ class MenuGUI():
 
 
 		self.difficulty_percent_map = {i: (6**(i+1)/2**(i+1), (i+1)*5) for i in range(3)}
-		self.difficulty_percent_map = {i: (n[0]/self.slider_ratio_map[2], n[1]*self.slider_ratio_map[3]) for i, n in self.difficulty_percent_map.copy().items()} # to cancel out ratios
+		self.difficulty_percent_map = {i: (n[0]/self.slider_ratio_map[2], n[1]/self.slider_ratio_map[3]) for i, n in self.difficulty_percent_map.copy().items()} # to cancel out ratios
 		
 		self.update_custom_percents(*self.difficulty_percent_map[0])
 
@@ -516,38 +516,62 @@ class GridGUI():
 		p = Position(i,j)
 		return self.g.is_in_bounds(p)
 
+	def blur_screen(self):
+		old_dims = (self.screen_length, self.screen_length)
+		new_dims = list(d*0.1 for d in old_dims)
+		
+		new_screen = pygame.transform.smoothscale(self.screen, new_dims)
+		new_screen = pygame.transform.smoothscale(new_screen, old_dims)
+		self.screen.blit(new_screen, (0,0))
+	
+	def pause_menu(self):
+		# blur screen
+		self.blur_screen()
+		pygame.display.update()
+		while True:
+			for event in pygame.event.get():				
+				if event.type == pygame.KEYUP and event.key == pygame.K_ESCAPE:
+					return
+
+
 	def play_game(self):
 		while True:
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:
 					return False
 
-				if event.type == pygame.MOUSEMOTION:
-					i, j = gui.get_box_inds_from_pos(*event.pos)
-					gui.color_hover(i,j)
+				if event.type == pygame.KEYUP and event.key == pygame.K_ESCAPE:
+					print('paused')
+					self.pause_menu()
+					self.draw_grid()
 
-				
-				if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and gui.is_in_playable_area(*event.pos):
-					i, j = gui.get_box_inds_from_pos(*event.pos)
+				if event.type == pygame.MOUSEMOTION:
+					i, j = self.get_box_inds_from_pos(*event.pos)
+					self.color_hover(i,j)
+
+				if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.is_in_playable_area(*event.pos):
+					i, j = self.get_box_inds_from_pos(*event.pos)
 					p = Position(i, j)
-					removed_mine = not gui.g.remove_tile(p)
-					gui.game_is_over = removed_mine or gui.g.is_completed_board() 
-					gui.draw_grid()
-					if gui.game_is_over:
+					removed_mine = not self.g.remove_tile(p)
+					self.game_is_over = removed_mine or self.g.is_completed_board() 
+					self.draw_grid()
+					if self.game_is_over:
 						return
 
-				elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and gui.is_in_playable_area(*event.pos):
-					i, j = gui.get_box_inds_from_pos(*event.pos)
+				elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and self.is_in_playable_area(*event.pos):
+					i, j = self.get_box_inds_from_pos(*event.pos)
 					p = Position(i, j)
 					
-					gui.g.flag(p, unflag_if_flagged=True)
-					gui.draw_grid()
+					self.g.flag(p, unflag_if_flagged=True)
+					self.draw_grid()
 
 if __name__ == '__main__':
 	m = MenuGUI()
 	ps = m.run()
 	ps = [int(p*m.slider_ratio_map[i]) for i, p in enumerate(ps.copy())]
 	window_length, border_length, mine_count, tiles_per_row = ps
+	
+	print(ps)
 
 	g = Grid(tiles_per_row, mine_count) # 25, 50
 	gui = GridGUI(g, window_length, border_length) # 500, 50
