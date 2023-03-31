@@ -54,8 +54,6 @@ class MenuGUI():
 		
 		self.update_custom_percents(*self.difficulty_percent_map[0])
 
-		print(self.difficulty_percent_map)
-
 		# render rectangles
 		self.render_everything()
 	
@@ -359,8 +357,6 @@ class MenuGUI():
 		prev_click = -1, 0
 		on_start_button = False
 		while True:
-			percents = [sl[-1] for sl in self.sliders]
-			print(percents)
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:	
 					return None				
@@ -552,7 +548,6 @@ if __name__ == '__main__':
 	ps = m.run()
 	ps = [int(p*m.slider_ratio_map[i]) for i, p in enumerate(ps.copy())]
 	window_length, border_length, mine_count, tiles_per_row = ps
-	print(ps)
 
 	g = Grid(tiles_per_row, mine_count) # 25, 50
 	gui = GridGUI(g, window_length, border_length) # 500, 50
