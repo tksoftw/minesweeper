@@ -37,13 +37,25 @@ class MenuGUI():
 		self.slider_ball_radius, self.sliders = self.get_sliders(bar_percents=bar_ps)
 
 		self.custom_settings_visible = c_visible
-		self.selected_button = 0
+		self.selected_button = 0	
 
-		self.slider_ratio_map = {}
-		self.slider_ratio_map[0] = 10
+		self.slider_ratio_map = {n : 10 for n in range(len(self.sliders))}
 		self.slider_ratio_map[1] = 0.1
-		self.slider_ratio_map.update({n : 1 for n in range(2, len(self.sliders))})
+		self.slider_ratio_map[2] = 5
+		self.slider_ratio_map[3] = 0.5
+
+		self.absolute_slider_mins = {n: lambda : 1 for n in range(len(self.sliders))}
+		self.absolute_slider_mins[2] = lambda : .2
+		self.absolute_slider_mins[3] = lambda : ((self.sliders[2][-1]*self.slider_ratio_map[2])**(1/2)+1)/self.slider_ratio_map[3]
+
+
+		self.difficulty_percent_map = {i: (6**(i+1)/2**(i+1), (i+1)*5) for i in range(3)}
+		self.difficulty_percent_map = {i: (n[0]/self.slider_ratio_map[2], n[1]*self.slider_ratio_map[3]) for i, n in self.difficulty_percent_map.copy().items()} # to cancel out ratios
 		
+		self.update_custom_percents(*self.difficulty_percent_map[0])
+
+		print(self.difficulty_percent_map)
+
 		# render rectangles
 		self.render_everything()
 	
@@ -295,10 +307,14 @@ class MenuGUI():
 		px, bar_min, bar_max = sb.centerx, s.x, s.right
 		max_d = bar_max - bar_min
 		d = bar_max-px
-		return round((1-d/max_d)*100, 1)
+		return max(self.absolute_slider_mins[n](), round((1-d/max_d)*100, 1))
 
 	def update_slider_percent(self, n, new_percent):
 		self.sliders[n] = self.sliders[n][:-1] + (new_percent,)
+
+	def update_custom_percents(self, p1, p2):
+		self.update_slider_percent(-2, p1)
+		self.update_slider_percent(-1, p2)
 
 	def update_centerx_from_percent(self, sl):
 		s, sb, *_, percent = sl
@@ -343,6 +359,8 @@ class MenuGUI():
 		prev_click = -1, 0
 		on_start_button = False
 		while True:
+			percents = [sl[-1] for sl in self.sliders]
+			print(percents)
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:	
 					return None				
@@ -356,9 +374,12 @@ class MenuGUI():
 						prev_bt_ind = self.selected_button
 						eraser = self.change_selected_button(bt_ind)
 						to_update = [eraser]
-						if prev_bt_ind == (len(self.buttons)-1) or bt_ind == (len(self.buttons)-1):
+						if (A := (bt_ind == (len(self.buttons)-1))) or prev_bt_ind == (len(self.buttons)-1):
 							self.toggle_custom_settings()
 							to_update.append(self.custom_slider_box)
+						if not A:
+							self.update_custom_percents(*self.difficulty_percent_map[bt_ind])
+
 						pygame.display.update(to_update)
 					elif (sl_ind := self.slider_clicked(event.pos, allowed_error=0.1)) is not None: # click on slider
 						if sl_ind >= 2 and not self.custom_settings_visible:
@@ -528,12 +549,13 @@ class GridGUI():
 
 if __name__ == '__main__':
 	m = MenuGUI()
-	p = m.run()
-		
-	print(p)
+	ps = m.run()
+	ps = [int(p*m.slider_ratio_map[i]) for i, p in enumerate(ps.copy())]
+	window_length, border_length, mine_count, tiles_per_row = ps
+	print(ps)
 
-	g = Grid(25, 50)
-	gui = GridGUI(g, 500, 50)
+	g = Grid(tiles_per_row, mine_count) # 25, 50
+	gui = GridGUI(g, window_length, border_length) # 500, 50
 	gui.draw_grid()
 	gui.play_game()
 	time.sleep(1)
