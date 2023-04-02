@@ -435,14 +435,14 @@ class GridGUI():
 		self.hover = None
 		self.game_is_over = False
 
-	def get_px_to_pt_multiplier(self):
+	def get_px_to_pt_multiplier(self, ch='O'):
 		# x -> font pt, y -> font px
 		y1 = 10
 		f1 = pygame.font.Font(pygame.font.get_default_font(), y1)
-		x1 = f1.size('O')[0]
+		x1 = f1.size(ch)[0]
 		y2 = 100
 		f2 = pygame.font.Font(pygame.font.get_default_font(), y2)
-		x2 = f2.size('O')[0]
+		x2 = f2.size(ch)[0]
 		return (x1/y1 + x2/y2)/2
 				
 	def get_border_padding(self):
@@ -527,12 +527,53 @@ class GridGUI():
 	def pause_menu(self):
 		# blur screen
 		self.blur_screen()
-		pygame.display.update()
-		while True:
-			for event in pygame.event.get():				
-				if event.type == pygame.KEYUP and event.key == pygame.K_ESCAPE:
-					return
 
+		# setup boxes
+		screen_box = pygame.Rect(0,0, self.screen_length, self.screen_length)
+		exit_main_menu_box = pygame.Rect(0, 0, self.screen_length*0.25, self.screen_length*0.2)
+		resume_game_box = pygame.Rect(exit_main_menu_box)
+		exit_main_menu_box.midleft = screen_box.midleft
+		resume_game_box.midright = screen_box.midright
+		exit_main_menu_box.x += exit_main_menu_box.w/1.5
+		resume_game_box.x -= resume_game_box.w/1.5
+
+		# setup text
+		font_pt = self.get_px_to_pt_multiplier()*resume_game_box.w/4
+		font = pygame.font.Font(pygame.font.get_default_font(), int(font_pt))
+		resume_text = font.render('Resume', True, COLORS['white'])
+		resume_text2 = font.render('game', True, COLORS['white'])
+		exit_text = font.render('Exit', True, COLORS['white'])
+		exit_text2 = font.render('to menu', True, COLORS['white'])
+		bt_height = resume_game_box.centery-resume_game_box.h/7.5
+		resume_aligner = resume_text.get_rect(center=(resume_game_box.centerx, bt_height))
+		exit_aligner = exit_text.get_rect(center=(exit_main_menu_box.centerx, bt_height))
+		resume_aligner2 = resume_text2.get_rect(center=(resume_game_box.centerx, bt_height+resume_aligner.h))
+		exit_aligner2 = exit_text2.get_rect(center=(exit_main_menu_box.centerx, bt_height+exit_aligner.h))	
+		
+		# draw
+		pygame.draw.rect(self.screen, COLORS['red'], exit_main_menu_box, 10)
+		pygame.draw.rect(self.screen, COLORS['green'], resume_game_box, 10)
+		self.screen.blit(resume_text, resume_aligner)
+		self.screen.blit(exit_text, exit_aligner)
+		self.screen.blit(resume_text2, resume_aligner2)
+		self.screen.blit(exit_text2, exit_aligner2)
+
+		pygame.display.update()
+
+		state = -1
+		while state == -1:
+			for event in pygame.event.get():				
+				if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+					state = 0
+				
+				if event.type == pygame.MOUSEBUTTONUP and resume_game_box.collidepoint(event.pos):
+					state = 0
+
+				if event.type == pygame.MOUSEBUTTONUP and exit_main_menu_box.collidepoint(event.pos):
+					state = 1
+
+		self.draw_grid()
+		return bool(state)
 
 	def play_game(self):
 		while True:
@@ -540,10 +581,10 @@ class GridGUI():
 				if event.type == pygame.QUIT:
 					return False
 
-				if event.type == pygame.KEYUP and event.key == pygame.K_ESCAPE:
-					print('paused')
-					self.pause_menu()
-					self.draw_grid()
+				if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+					quit = self.pause_menu()
+					if quit:
+						return
 
 				if event.type == pygame.MOUSEMOTION:
 					i, j = self.get_box_inds_from_pos(*event.pos)
