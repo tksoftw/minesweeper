@@ -359,7 +359,8 @@ class MenuGUI():
 		while True:
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:	
-					return None				
+					raise StopIteration		
+
 				if event.type == pygame.WINDOWRESIZED:
 					new_w, new_h = event.x, event.y
 					percents = [sl[-1] for sl in self.sliders]
@@ -564,7 +565,10 @@ class GridGUI():
 
 		continue_choice = None
 		while continue_choice is None:
-			for event in pygame.event.get():				
+			for event in pygame.event.get():
+				if event.type == pygame.QUIT:	
+					raise StopIteration
+
 				if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
 					continue_choice = False
 				
@@ -626,18 +630,21 @@ class GridGUI():
 		pygame.display.update()
 
 		while True:
-			for event in pygame.event.get():				
+			for event in pygame.event.get():
+				if event.type == pygame.QUIT:	
+					raise StopIteration
+
 				if event.type == pygame.MOUSEBUTTONUP and continue_game_box.collidepoint(event.pos):	
-					return False
-				if event.type == pygame.MOUSEBUTTONUP and exit_main_menu_box.collidepoint(event.pos):
 					return True
+				if event.type == pygame.MOUSEBUTTONUP and exit_main_menu_box.collidepoint(event.pos):
+					return False
 
 
 	def play_game(self):
 		while True:
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:
-					return False
+					raise StopIteration
 
 				if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
 					quit = self.pause_menu()
@@ -666,18 +673,22 @@ class GridGUI():
 					self.draw_grid()
 
 if __name__ == '__main__':
-	m = MenuGUI()
-	ps = m.run()
-	ps = [int(p*m.slider_ratio_map[i]) for i, p in enumerate(ps.copy())]
-	window_length, border_length, mine_count, tiles_per_row = ps
+	keep_settings = False
+	window_length, border_length, mine_count, tiles_per_row = 500, 5, 16, 8 # should not be needed, but just in case
+	try:
+		while True:
+			if not keep_settings:
+				m = MenuGUI()
+				ps = m.run()
+				ps = [int(p*m.slider_ratio_map[i]) for i, p in enumerate(ps.copy())]
+				window_length, border_length, mine_count, tiles_per_row = ps
 
-	g = Grid(tiles_per_row, mine_count)
-	gui = GridGUI(g, window_length, border_length)
-	gui.play_game()
-
+			g = Grid(tiles_per_row, mine_count)
+			gui = GridGUI(g, window_length, border_length)
+			keep_settings = gui.play_game()
+	except (StopIteration, KeyboardInterrupt) as game_exit: # Game quit
+		pass
 	pygame.quit()
-
-
 
 """
 if event.type == pygame.MOUSEMOTION:
