@@ -556,8 +556,9 @@ class GridGUI():
 		exit_aligner2 = exit_text2.get_rect(center=(exit_main_menu_box.centerx, bt_height+exit_aligner.h))	
 		
 		# draw
-		pygame.draw.rect(self.screen, COLORS['red'], exit_main_menu_box, 10)
-		pygame.draw.rect(self.screen, COLORS['green'], resume_game_box, 10)
+		box_border_length = int(resume_game_box.w/15)
+		pygame.draw.rect(self.screen, COLORS['red'], exit_main_menu_box, box_border_length)
+		pygame.draw.rect(self.screen, COLORS['green'], resume_game_box, box_border_length)
 		self.screen.blit(resume_text, resume_aligner)
 		self.screen.blit(exit_text, exit_aligner)
 		self.screen.blit(resume_text2, resume_aligner2)
@@ -565,23 +566,23 @@ class GridGUI():
 
 		pygame.display.update()
 
-		continue_choice = None
-		while continue_choice is None:
+		resume_game = False
+		while not resume_game:
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:	
 					raise StopIteration
 
 				if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-					continue_choice = False
-				
+					resume_game = True
+
 				if event.type == pygame.MOUSEBUTTONUP and resume_game_box.collidepoint(event.pos):	
-					continue_choice = False
+					resume_game = True
 
 				if event.type == pygame.MOUSEBUTTONUP and exit_main_menu_box.collidepoint(event.pos):
-					continue_choice = True
+					return False
 
 		self.draw_grid()
-		return continue_choice
+		return resume_game
 
 	def end_menu(self, win=True):
 		# blur
@@ -598,66 +599,96 @@ class GridGUI():
 
 		# setup text
 		font_pt = self.get_px_to_pt_multiplier()*continue_game_box.w/4
+		font_pt2 = font_pt/2
 		font = pygame.font.Font(pygame.font.get_default_font(), int(font_pt))
-		continue_text = font.render('Play again', True, COLORS['white'])
-		continue_text2 = font.render('(same settings)', True, COLORS['white'])
+		font_smaller = pygame.font.Font(pygame.font.get_default_font(), int(font_pt2))
+		continue_text = font.render('Play', True, COLORS['white'])
+		continue_text2 = font.render('again', True, COLORS['white'])
+		continue_text3 = font_smaller.render('(same settings)', True, COLORS['white'])
 		exit_text = font.render('Exit', True, COLORS['white'])
 		exit_text2 = font.render('to menu', True, COLORS['white'])
 		bt_height = continue_game_box.centery-continue_game_box.h/7.5
 		continue_aligner = continue_text.get_rect(center=(continue_game_box.centerx, bt_height))
+		continue_aligner2 = continue_text2.get_rect(center=(continue_game_box.centerx, bt_height+continue_aligner.h))	
+		continue_aligner3 = continue_text3.get_rect(center=(continue_game_box.centerx, bt_height+continue_aligner2.h*1.25))
+		continue_aligner3.y += continue_aligner3.h
+
 		exit_aligner = exit_text.get_rect(center=(exit_main_menu_box.centerx, bt_height))
-		continue_aligner2 = continue_text2.get_rect(center=(continue_game_box.centerx, bt_height+continue_aligner.h))
 		exit_aligner2 = exit_text2.get_rect(center=(exit_main_menu_box.centerx, bt_height+exit_aligner.h))	
-		
+
 		# setup big text
-		big_font_pt = font_pt*4
+		win_str, lose_str = 'YOU WIN!', 'YOU LOSE'
+		big_font_pt = font_pt*3.5
 		big_font = pygame.font.Font(pygame.font.get_default_font(), int(big_font_pt))
-		win_text = big_font.render('YOU WIN', True, COLORS['green'])
-		lose_text = big_font.render('YOU LOSE', True, COLORS['red'])
+		win_text = big_font.render(win_str, True, COLORS['green'])
+		lose_text = big_font.render(lose_str, True, COLORS['red'])
 		bigt_height = bt_height*(.50)
 		bigt_centerx = (exit_main_menu_box.x+continue_game_box.right)/2
 		win_aligner = win_text.get_rect(center=(bigt_centerx, bigt_height))
 		lose_aligner = lose_text.get_rect(center=(bigt_centerx, bigt_height))
-		(big_text, bigt_aligner) = (win_text, win_aligner) if win else (lose_text, lose_aligner)
-
+		(big_text, big_text_aligner) = (win_text, win_aligner) if win else (lose_text, lose_aligner)
+		
+		# setup outline for big text
+		big_outline_font_pt = big_font_pt+1
+		big_outline_font = pygame.font.Font(pygame.font.get_default_font(), int(big_outline_font_pt))
+		win_outline = big_outline_font.render(win_str, True, COLORS['black'])
+		lose_outline = big_outline_font.render(lose_str, True, COLORS['black'])	
+		win_outline_aligner = win_outline.get_rect(center=(bigt_centerx, bigt_height))
+		lose_outline_aligner = lose_outline.get_rect(center=(bigt_centerx, bigt_height))	
+		(big_outline, big_outline_aligner) = (win_outline, win_outline_aligner) if win else (lose_outline, lose_outline_aligner)
+		
 		# draw
-		pygame.draw.rect(self.screen, COLORS['red'], exit_main_menu_box, 10)
-		pygame.draw.rect(self.screen, COLORS['green'], continue_game_box, 10)
+		box_border_length = int(continue_game_box.w/15)
+		pygame.draw.rect(self.screen, COLORS['red'], exit_main_menu_box, box_border_length)
+		pygame.draw.rect(self.screen, COLORS['green'], continue_game_box, box_border_length)
 		self.screen.blit(continue_text, continue_aligner)
+		self.screen.blit(continue_text2, continue_aligner2)	
+		self.screen.blit(continue_text3, continue_aligner3)
 		self.screen.blit(exit_text, exit_aligner)
-		self.screen.blit(continue_text2, continue_aligner2)
-		self.screen.blit(exit_text2, exit_aligner2)
-		self.screen.blit(big_text, bigt_aligner)
+		self.screen.blit(exit_text2, exit_aligner2)	
+		self.screen.blit(big_outline, big_outline_aligner)
+		self.screen.blit(big_text, big_text_aligner)
 
 		pygame.display.update()
-
+		
 		while True:
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:	
 					raise StopIteration
-
-				if event.type == pygame.MOUSEBUTTONUP and continue_game_box.collidepoint(event.pos):	
+				
+				if event.type == pygame.MOUSEBUTTONDOWN and continue_game_box.collidepoint(event.pos):	
 					return True
-				if event.type == pygame.MOUSEBUTTONUP and exit_main_menu_box.collidepoint(event.pos):
+				if event.type == pygame.MOUSEBUTTONDOWN and exit_main_menu_box.collidepoint(event.pos):
 					return False
 
 
 	def play_game(self):
+		ctrl_pressed = False
 		while True:
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:
 					raise StopIteration
 
 				if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-					quit = self.pause_menu()
-					if quit:
+					resume_game = self.pause_menu()
+					if not resume_game:
 						return False
-
+				
+				if (event.type == pygame.KEYDOWN or event.type == pygame.KEYUP) and event.key == pygame.K_LCTRL:
+					ctrl_pressed = not ctrl_pressed	
+	
 				if event.type == pygame.MOUSEMOTION:
 					i, j = self.get_box_inds_from_pos(*event.pos)
 					self.color_hover(i,j)
-
-				if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.is_in_playable_area(*event.pos):
+				
+				if event.type == pygame.MOUSEBUTTONDOWN and (event.button == 3 or (event.button == 1 and ctrl_pressed)) and self.is_in_playable_area(*event.pos):
+					i, j = self.get_box_inds_from_pos(*event.pos)
+					p = Position(i, j)
+					
+					self.g.flag(p, unflag_if_flagged=True)
+					self.draw_grid()
+				
+				elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.is_in_playable_area(*event.pos):
 					i, j = self.get_box_inds_from_pos(*event.pos)
 					p = Position(i, j)
 					removed_mine = not self.g.remove_tile(p)
@@ -668,13 +699,7 @@ class GridGUI():
 						time.sleep(1)
 						return self.end_menu(self.game_won)
 
-				elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and self.is_in_playable_area(*event.pos):
-					i, j = self.get_box_inds_from_pos(*event.pos)
-					p = Position(i, j)
-					
-					self.g.flag(p, unflag_if_flagged=True)
-					self.draw_grid()
-
+				
 if __name__ == '__main__':
 	keep_settings = False
 	window_length, border_length, mine_count, tiles_per_row = 500, 5, 16, 8 # should not be needed, but just in case
