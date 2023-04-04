@@ -1,18 +1,23 @@
 from minesweeper import Grid, Position
 import pygame
 import time
+import colorsys
 pygame.init()
 
 COLORS = {
 	'black': (0,0,0),
 	'white': (255,255,255),
-	'grey': (138,138,138),
-	'red': (255,0,0),
-	'green': (0,255,0),
-	'blue': (0,0,255),
 	'light_grey': (192,192,192),
 	'mid_grey': (148,148,148),
-	'purple': (98, 2, 185)
+	'grey': (138,138,138),
+	'red': (255,0,0),
+	'orange': (255,130,0),
+	'yellow': (255,230,0),
+	'green': (0,255,0),
+	'blue': (0,0,255),
+	'pink': (255,0,230),
+	'purple': (140, 0, 255),
+	
 }
 
 class MenuGUI():
@@ -436,8 +441,24 @@ class GridGUI():
 		self.hover = None
 		self.game_is_over = False
 		self.game_won = False
-
+		self.color_cycle = self.get_color_cycle()
 		self.draw_grid()
+	
+	def get_color_cycle(self, hue=0.5):
+		color_cycle = [ COLORS['black'], COLORS['green'], COLORS['yellow'], COLORS['orange'],
+						COLORS['pink'], COLORS['purple'], COLORS['blue'], COLORS['red'] ]
+		modified_cycle = []
+		for color in color_cycle:
+			floating_rgb = [v/255 for v in color]
+			print(floating_rgb)
+			hsv_color = colorsys.rgb_to_hsv(*floating_rgb)
+			adjusted_color = colorsys.hsv_to_rgb(*hsv_color[:-1], hue) # adjust hue
+			print(adjusted_color)
+			modified_cycle.append(adjusted_color)
+
+		return modified_cycle
+
+
 
 	def get_px_to_pt_multiplier(self, ch='O'):
 		# x -> font pt, y -> font px
@@ -485,7 +506,8 @@ class GridGUI():
 					pygame.draw.rect(self.screen, COLORS['light_grey'], box)
 				elif viewable.isdigit():
 					pygame.draw.rect(self.screen, COLORS['light_grey'], box)
-					warning_number = self.font.render(v, True, COLORS['black'])
+					num_color = self.color_cycle[int(viewable)-1]
+					warning_number = self.font.render(v, True, num_color)
 					aligner = warning_number.get_rect(center=(box.centerx, box.centery))
 					self.screen.blit(warning_number, aligner)
 				pygame.draw.rect(self.screen, COLORS['black'], box, 1)
