@@ -435,6 +435,7 @@ class GridGUI():
 		self.font = pygame.font.Font(pygame.font.get_default_font(), int(self.box_size*self.font_multiplier))
 		self.hover = None
 		self.game_is_over = False
+		self.game_won = False
 
 		self.draw_grid()
 
@@ -471,7 +472,8 @@ class GridGUI():
 				xpos, ypos = [ind*self.box_size + self.total_border for ind in (j, i)]
 				box = pygame.Rect(xpos, ypos, self.box_size, self.box_size)
 				if self.game_is_over and v == '*':
-					pygame.draw.rect(self.screen, COLORS['red'], box)
+					end_color = COLORS['green'] if self.game_won else COLORS['red']
+					pygame.draw.rect(self.screen, end_color, box)
 					mine = self.font.render('*', True, COLORS['white'])
 					aligner = mine.get_rect(center=(box.centerx, box.centery))
 					self.screen.blit(mine, aligner)
@@ -659,11 +661,12 @@ class GridGUI():
 					i, j = self.get_box_inds_from_pos(*event.pos)
 					p = Position(i, j)
 					removed_mine = not self.g.remove_tile(p)
-					self.game_is_over = removed_mine or self.g.is_completed_board() 
+					self.game_is_over = removed_mine or self.g.is_completed_board()
+					self.game_won = not removed_mine
 					self.draw_grid()
 					if self.game_is_over:
 						time.sleep(1)
-						return self.end_menu(not removed_mine)
+						return self.end_menu(self.game_won)
 
 				elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and self.is_in_playable_area(*event.pos):
 					i, j = self.get_box_inds_from_pos(*event.pos)
