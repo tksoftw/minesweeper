@@ -463,8 +463,6 @@ class GridGUI():
 
 		return modified_cycle
 
-
-
 	def get_px_to_pt_multiplier(self, ch='O'):
 		# x -> font pt, y -> font px
 		y1 = 10
