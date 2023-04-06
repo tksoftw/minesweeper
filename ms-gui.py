@@ -355,7 +355,14 @@ class MenuGUI():
 		self.draw_start_button()
 		return shadow
 
-	def run(self):
+	def run(self, pyinstaller_debug_add_positive=True):
+		# for pyinstaller
+		to_add = 2*int(pyinstaller_debug_add_positive)-1
+		print(to_add)
+		new_w, new_h = self.w+to_add, self.h+to_add
+		percents = [sl[-1] for sl in self.sliders]
+		self.__init__(new_w, new_h, self.custom_settings_visible, percents)
+
 		# main stuff
 		hovered_sb_num = -1
 		prev_click = -1, 0
@@ -370,7 +377,7 @@ class MenuGUI():
 					percents = [sl[-1] for sl in self.sliders]
 					self.__init__(new_w, new_h, self.custom_settings_visible, percents)
 
-				if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1: # click
+				if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1: # click	
 					if (bt_ind := self.button_clicked(event.pos)) is not None and bt_ind != self.selected_button: # click on button
 						prev_bt_ind = self.selected_button
 						eraser = self.change_selected_button(bt_ind)
@@ -724,11 +731,13 @@ if __name__ == '__main__':
 	keep_settings = False
 	ps = None
 	w, h = MenuGUI.__init__.__defaults__[:2] # default width and height
+	pyinstaller_debug_add = False
 	try:
 		while True:
 			if not keep_settings:
+				pyinstaller_debug_add = not pyinstaller_debug_add
 				m = MenuGUI(w, h, bar_ps=ps)
-				ps = m.run()
+				ps = m.run(pyinstaller_debug_add)
 				w, h = m.w, m.h
 				filtered_ps = [int(p*m.slider_ratio_map[i]) for i, p in enumerate(ps.copy())]
 				window_length, border_length, mine_count, tiles_per_row = filtered_ps
