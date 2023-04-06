@@ -3,6 +3,7 @@ import pygame
 import time
 import colorsys
 pygame.init()
+pygame.display.set_caption('minesweeper')
 
 COLORS = {
 	'black': (0,0,0),
