@@ -36,6 +36,9 @@ class MenuGUI():
 		self.slider_font = pygame.font.Font(pygame.font.get_default_font(), pt//2)
 
 		self.debug_boxes = {}
+		self.default_percents = (80,0,50,50)
+		if bar_ps is None:
+			bar_ps = self.default_percents
 
 		self.buttons = self.get_buttons()
 		self.start_button = self.get_start_button()
@@ -169,11 +172,13 @@ class MenuGUI():
 					sc4.midleft = self.buttons[0].x, inner_ymid
 				debug_sc4s.append(sc4)
 				
+
 				if j % 2 == 0: # even
 					# setup text
-					msg_n = len(mps)*int(opposite_side)+i
-					message = messages[msg_n]
-					sliders.append((message, sc4, 50))
+					slider_n = len(mps)*int(opposite_side)+i
+					message = messages[slider_n]
+					percent = bar_percents[slider_n]
+					sliders.append((message, sc4, percent))
 				else:
 					# setup rect
 					s = pygame.Rect(0,0, sc4.w/1.25, sc4.h/16)
@@ -183,14 +188,7 @@ class MenuGUI():
 					self.slider_radius = int(sc4.h//2)
 					sliders[-1] = (s, sb) + sliders[-1]
 					self.update_centerx_from_percent(sliders[-1])
-		
-
-		if bar_percents is not None:
-			for i, sl in enumerate(sliders):
-				sb_n = len(sliders)*int(opposite_side)+i
-				sliders[i] = sl[:-1] + (bar_percents[sb_n],) # update percent
-				self.update_centerx_from_percent(sliders[i]) # update centerx
-
+			
 		to_add_debug = (slider_container, sc2, debug_sc3s, debug_sc4s)
 		if not opposite_side:
 			self.debug_boxes['sliders'] = []
@@ -388,7 +386,7 @@ class MenuGUI():
 							continue
 						if self.in_range_pythag(self.sliders[sl_ind][1].center, event.pos, self.slider_ball_radius):
 							if prev_click[0] == sl_ind and prev_click[1] > 0:
-								self.update_slider_percent(sl_ind, 50)
+								self.update_slider_percent(sl_ind, self.default_percents[sl_ind])
 								self.update_centerx_from_percent(self.sliders[sl_ind])
 							prev_click = sl_ind, prev_click[1]+1
 						else:
@@ -437,23 +435,22 @@ class GridGUI():
 		self.box_size = self.get_box_size()	
 		self.screen = pygame.display.set_mode((screen_length, screen_length))
 		self.font_multiplier = self.get_px_to_pt_multiplier()
-		self.font = pygame.font.Font(pygame.font.get_default_font(), int(self.box_size*self.font_multiplier))
+		self.font = pygame.font.Font(pygame.font.get_default_font(), int(self.box_size*self.font_multiplier))	
 		self.hover = None
 		self.game_is_over = False
 		self.game_won = False
-		self.color_cycle = self.get_color_cycle()
+		self.color_cycle = self.get_color_cycle(0.7)
 		self.draw_grid()
 	
-	def get_color_cycle(self, hue=0.5):
-		color_cycle = [ COLORS['black'], COLORS['green'], COLORS['yellow'], COLORS['orange'],
+	def get_color_cycle(self, hue_decrease=0.5):
+		color_cycle = [ COLORS['white'], COLORS['green'], COLORS['yellow'], COLORS['orange'],
 						COLORS['pink'], COLORS['purple'], COLORS['blue'], COLORS['red'] ]
 		modified_cycle = []
 		for color in color_cycle:
 			floating_rgb = [v/255 for v in color]
-			print(floating_rgb)
 			hsv_color = colorsys.rgb_to_hsv(*floating_rgb)
-			adjusted_color = colorsys.hsv_to_rgb(*hsv_color[:-1], hue) # adjust hue
-			print(adjusted_color)
+			adjusted_fl_rgb = colorsys.hsv_to_rgb(*hsv_color[:-1], max(0,hsv_color[-1]-hue_decrease)) # adjust hue
+			adjusted_color = [v*255 for v in adjusted_fl_rgb]
 			modified_cycle.append(adjusted_color)
 
 		return modified_cycle
@@ -724,14 +721,16 @@ class GridGUI():
 				
 if __name__ == '__main__':
 	keep_settings = False
-	window_length, border_length, mine_count, tiles_per_row = 500, 5, 16, 8 # should not be needed, but just in case
+	ps = None
+	w, h = MenuGUI.__init__.__defaults__[:2] # default width and height
 	try:
 		while True:
 			if not keep_settings:
-				m = MenuGUI()
+				m = MenuGUI(w, h, bar_ps=ps)
 				ps = m.run()
-				ps = [int(p*m.slider_ratio_map[i]) for i, p in enumerate(ps.copy())]
-				window_length, border_length, mine_count, tiles_per_row = ps
+				w, h = m.w, m.h
+				filtered_ps = [int(p*m.slider_ratio_map[i]) for i, p in enumerate(ps.copy())]
+				window_length, border_length, mine_count, tiles_per_row = filtered_ps
 
 			g = Grid(tiles_per_row, mine_count)
 			gui = GridGUI(g, window_length, border_length)
