@@ -22,7 +22,7 @@ COLORS = {
 }
 
 class MenuGUI():
-	def __init__(self, w=640, h=480, c_visible=False, bar_ps=None):
+	def __init__(self, w=640, h=480, c_visible=False, bar_ps=None, selected_button=0):
 		self.screen = pygame.display.set_mode((w, h), pygame.RESIZABLE)
 		self.w, self.h = w, h
 		self.screen.fill(COLORS['purple'])
@@ -37,7 +37,7 @@ class MenuGUI():
 		self.slider_font = pygame.font.Font(pygame.font.get_default_font(), pt//2)
 
 		self.debug_boxes = {}
-		self.default_percents = (80,0,50,50)
+		self.default_percents = (80,0,10,40)
 		if bar_ps is None:
 			bar_ps = self.default_percents
 
@@ -46,7 +46,7 @@ class MenuGUI():
 		self.slider_ball_radius, self.sliders = self.get_sliders(bar_percents=bar_ps)
 
 		self.custom_settings_visible = c_visible
-		self.selected_button = 0	
+		self.selected_button = selected_button	
 
 		self.slider_ratio_map = {n : 10 for n in range(len(self.sliders))}
 		self.slider_ratio_map[1] = 0.1
@@ -61,7 +61,8 @@ class MenuGUI():
 		self.difficulty_percent_map = {i: (6**(i+1)/2**(i+1), (i+1)*5) for i in range(3)}
 		self.difficulty_percent_map = {i: (n[0]/self.slider_ratio_map[2], n[1]/self.slider_ratio_map[3]) for i, n in self.difficulty_percent_map.copy().items()} # to cancel out ratios
 		
-		self.update_custom_percents(*self.difficulty_percent_map[0])
+		if self.selected_button != 3:
+			self.update_custom_percents(*self.difficulty_percent_map[self.selected_button])
 
 		# render rectangles
 		self.render_everything()
@@ -336,9 +337,11 @@ class MenuGUI():
 		if not self.custom_settings_visible:
 			update_list.extend([self.hide_slider(-i) for i in range(1,3)])
 		else:
+			# reset slider percents
+			custom_defaults = self.default_percents[-2:]
+			self.update_custom_percents(*custom_defaults)
 			for i in range(1, 3):
-				# reset slider positions
-				self.sliders[-i] = self.sliders[-i][:-1] + (50,) # update percent
+				# reset slider positions	
 				self.update_centerx_from_percent(self.sliders[-i]) # update centerx
 				self.draw_slider(len(self.sliders)-i)
 				to_add = list(self.sliders[-i][:2])+[self.sliders[-i][-1]]
@@ -361,7 +364,7 @@ class MenuGUI():
 		print(to_add)
 		new_w, new_h = self.w+to_add, self.h+to_add
 		percents = [sl[-1] for sl in self.sliders]
-		self.__init__(new_w, new_h, self.custom_settings_visible, percents)
+		self.__init__(new_w, new_h, self.custom_settings_visible, percents, self.selected_button)
 
 		# main stuff
 		hovered_sb_num = -1
@@ -370,12 +373,12 @@ class MenuGUI():
 		while True:
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:	
-					raise StopIteration		
+					raise StopIteration
 
 				if event.type == pygame.WINDOWRESIZED:
 					new_w, new_h = event.x, event.y
 					percents = [sl[-1] for sl in self.sliders]
-					self.__init__(new_w, new_h, self.custom_settings_visible, percents)
+					self.__init__(new_w, new_h, self.custom_settings_visible, percents, self.selected_button)
 
 				if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1: # click	
 					if (bt_ind := self.button_clicked(event.pos)) is not None and bt_ind != self.selected_button: # click on button
@@ -437,28 +440,36 @@ class GridGUI():
 	def __init__(self, g: Grid, screen_length, const_border=5):
 		self.g = g
 		self.screen_length = screen_length
+
+		timer_bar = TimerBar(screen_length)
+
+		self.screen = timer_bar.play_area
+		self.full_screen = timer_bar.full_screen
+		self.timer_bar = timer_bar
+		
 		self.row_length = len(g.grid)
 		self.const_border = const_border
 		self.total_border = const_border + self.get_border_padding()
 		self.box_size = self.get_box_size()	
-		self.screen = pygame.display.set_mode((screen_length, screen_length))
 		self.font_multiplier = self.get_px_to_pt_multiplier()
 		self.font = pygame.font.Font(pygame.font.get_default_font(), int(self.box_size*self.font_multiplier))	
 		self.hover = None
 		self.game_is_over = False
 		self.game_won = False
-		self.color_cycle = self.get_color_cycle(0.7)
+		self.color_cycle = self.get_color_cycle(0.45)
+		print(self.color_cycle)
 		self.draw_grid()
-	
-	def get_color_cycle(self, hue_decrease=0.5):
+
+	def get_color_cycle(self, value_decrease=0.5):
 		color_cycle = [ COLORS['white'], COLORS['green'], COLORS['yellow'], COLORS['orange'],
 						COLORS['pink'], COLORS['purple'], COLORS['blue'], COLORS['red'] ]
 		modified_cycle = []
-		for color in color_cycle:
+		for i, color in enumerate(color_cycle):
+			vd = value_decrease if i != 0 else value_decrease*1.75
 			floating_rgb = [v/255 for v in color]
 			hsv_color = colorsys.rgb_to_hsv(*floating_rgb)
-			adjusted_fl_rgb = colorsys.hsv_to_rgb(*hsv_color[:-1], max(0,hsv_color[-1]-hue_decrease)) # adjust hue
-			adjusted_color = [v*255 for v in adjusted_fl_rgb]
+			adjusted_fl_rgb = colorsys.hsv_to_rgb(*hsv_color[:-1], max(0,hsv_color[-1]-vd)) # adjust hue
+			adjusted_color = [int(v*255) for v in adjusted_fl_rgb]
 			modified_cycle.append(adjusted_color)
 
 		return modified_cycle
@@ -534,7 +545,11 @@ class GridGUI():
 		if A or B:
 			pygame.display.update()
 	
+	def translate_coords_to_grid(self, x, y):
+		return (x, y-self.timer_bar.h)
+
 	def get_box_inds_from_pos(self, x, y):
+		x, y = self.translate_coords_to_grid(x,y)
 		B = self.total_border
 		
 		row = ((y-B)//self.box_size)
@@ -724,7 +739,26 @@ class GridGUI():
 						time.sleep(1)
 						return self.end_menu(self.game_won)
 
-				
+
+class TimerBar:
+	def __init__(self, play_area_length):
+		bar_height = play_area_length//20 # 5%
+		full_screen = pygame.display.set_mode((play_area_length, play_area_length+bar_height))
+
+		screen_rect = pygame.Rect(0,0, play_area_length, bar_height)
+		play_area_rect = pygame.Rect(0,0, play_area_length, play_area_length)
+		play_area_rect.y += screen_rect.h
+
+		self.w, self.h = screen_rect.size
+		self.screen = full_screen.subsurface(screen_rect)	
+		self.play_area = full_screen.subsurface(play_area_rect)
+		self.full_screen = full_screen
+
+		self.screen.fill(COLORS['blue'])
+
+
+
+
 if __name__ == '__main__':
 	keep_settings = False
 	ps = None
