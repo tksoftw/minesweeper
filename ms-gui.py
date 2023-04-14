@@ -9,7 +9,7 @@ COLORS = {
 	'black': (0,0,0),
 	'white': (255,255,255),
 	'light_grey': (192,192,192),
-	'mid_grey': (148,148,148),
+	'mid_grey': (153,153,153),
 	'grey': (138,138,138),
 	'red': (255,0,0),
 	'orange': (255,130,0),
@@ -22,7 +22,7 @@ COLORS = {
 }
 
 class MenuGUI():
-	def __init__(self, w=640, h=480, c_visible=False, bar_ps=None, selected_button=0):
+	def __init__(self, w=768, h=576, c_visible=False, bar_ps=None, selected_button=0):
 		self.screen = pygame.display.set_mode((w, h), pygame.RESIZABLE)
 		self.w, self.h = w, h
 		self.screen.fill(COLORS['purple'])
@@ -361,7 +361,6 @@ class MenuGUI():
 	def run(self, pyinstaller_debug_add_positive=True):
 		# for pyinstaller
 		to_add = 2*int(pyinstaller_debug_add_positive)-1
-		print(to_add)
 		new_w, new_h = self.w+to_add, self.h+to_add
 		percents = [sl[-1] for sl in self.sliders]
 		self.__init__(new_w, new_h, self.custom_settings_visible, percents, self.selected_button)
@@ -457,7 +456,6 @@ class GridGUI():
 		self.game_is_over = False
 		self.game_won = False
 		self.color_cycle = self.get_color_cycle(0.45)
-		print(self.color_cycle)
 		self.draw_grid()
 
 	def get_color_cycle(self, value_decrease=0.5):
@@ -561,17 +559,18 @@ class GridGUI():
 		p = Position(i,j)
 		return self.g.is_in_bounds(p)
 
-	def blur_screen(self):
-		old_dims = (self.screen_length, self.screen_length)
+	def blur_screen(self, full=False):
+		screen = self.screen if not full else self.full_screen
+		old_dims = screen.get_size()
 		new_dims = list(d*0.1 for d in old_dims)
 		
-		new_screen = pygame.transform.smoothscale(self.screen, new_dims)
+		new_screen = pygame.transform.smoothscale(screen, new_dims)
 		new_screen = pygame.transform.smoothscale(new_screen, old_dims)
-		self.screen.blit(new_screen, (0,0))
+		screen.blit(new_screen, (0,0))
 	
 	def pause_menu(self):
 		# blur screen
-		self.blur_screen()
+		self.blur_screen(full=True)
 
 		# setup boxes
 		screen_box = pygame.Rect(0,0, self.screen_length, self.screen_length)
@@ -595,6 +594,24 @@ class GridGUI():
 		resume_aligner2 = resume_text2.get_rect(center=(resume_game_box.centerx, bt_height+resume_aligner.h))
 		exit_aligner2 = exit_text2.get_rect(center=(exit_main_menu_box.centerx, bt_height+exit_aligner.h))	
 		
+		# setup big text
+		paused_str = 'PAUSED'
+		big_font_pt = font_pt*3.5
+		big_font = pygame.font.Font(pygame.font.get_default_font(), int(big_font_pt))
+		paused_text = big_font.render(paused_str, True, COLORS['blue'])
+		bigt_height = bt_height*(.50)
+		bigt_centerx = (exit_main_menu_box.x+resume_game_box.right)/2
+		paused_aligner = paused_text.get_rect(center=(bigt_centerx, bigt_height))
+		big_text, big_text_aligner = paused_text, paused_aligner
+		
+		# setup outline for big text
+		big_outline_font_pt = big_font_pt+1
+		big_outline_font = pygame.font.Font(pygame.font.get_default_font(), int(big_outline_font_pt))
+		paused_outline = big_outline_font.render(paused_str, True, COLORS['black'])
+		paused_outline_aligner = paused_outline.get_rect(center=(bigt_centerx, bigt_height))
+		
+		big_outline, big_outline_aligner = paused_outline, paused_outline_aligner
+
 		# draw
 		box_border_length = int(resume_game_box.w/15)
 		pygame.draw.rect(self.screen, COLORS['red'], exit_main_menu_box, box_border_length)
@@ -603,6 +620,8 @@ class GridGUI():
 		self.screen.blit(exit_text, exit_aligner)
 		self.screen.blit(resume_text2, resume_aligner2)
 		self.screen.blit(exit_text2, exit_aligner2)
+		self.screen.blit(big_outline, big_outline_aligner)
+		self.screen.blit(big_text, big_text_aligner)
 
 		pygame.display.update()
 
@@ -704,10 +723,9 @@ class GridGUI():
 	
 	def play_game(self):
 		ctrl_pressed = False
-		clock = pygame.time.Clock()
+		first_click = False
 		while True:
-			clock.tick(1000)
-			self.timer.update_clock(1)
+			self.timer.update_clock_dynamic()
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:
 					raise StopIteration
@@ -716,6 +734,8 @@ class GridGUI():
 					resume_game = self.pause_menu()
 					if not resume_game:
 						return False
+					if not first_click:
+						self.timer.update_clock(0)
 				
 				if (event.type == pygame.KEYDOWN or event.type == pygame.KEYUP) and event.key == pygame.K_LCTRL:
 					ctrl_pressed = not ctrl_pressed	
@@ -732,6 +752,10 @@ class GridGUI():
 					self.draw_grid()
 				
 				elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.is_in_playable_area(*event.pos):
+					if not first_click:
+						self.timer.start_clock()
+						first_click = True
+
 					i, j = self.get_box_inds_from_pos(*event.pos)
 					p = Position(i, j)
 					removed_mine = not self.g.remove_tile(p)
@@ -760,7 +784,7 @@ class TimerBar:
 		self.screen.fill(COLORS['blue'])
 
 		self.clock = self.get_clock()
-		self.update_clock()
+		self.update_clock(0)
 
 	def get_px_to_pt_multiplier(self, ch='O'):
 		# x -> font pt, y -> font px
@@ -773,35 +797,50 @@ class TimerBar:
 		return (y1/x1 + y2/x2)/2
 
 	def get_clock(self):
-		clock_rect = pygame.Rect(0, 0, self.w/3, self.h/2)
-		clock_rect.center = self.screen.get_rect().center
-		
+		clock_aligner = pygame.Rect(0,0, self.w/6, self.h/1.25)
+		clock_aligner.center = self.screen.get_rect().center
+
 		clock_time = 0
 
-		m = self.get_px_to_pt_multiplier('00:00:00')
-		pt = int(m*clock_rect.h*7.5)
+		m = self.get_px_to_pt_multiplier('00:00.00')
+		pt = int(m*self.h*4)
 		clock_font = pygame.font.Font(pygame.font.get_default_font(), pt)
-
-		return [clock_time, clock_rect, clock_font]
-
-
-	def update_clock(self, elapsed_time=0): # elapsed time in ms
-		self.clock[0] += 1
-
-		clock_time, clock_rect, clock_font = self.clock
 		
-		hundreth_secs = (clock_time//10)%100
-		secs = (clock_time//1000)%60
-		mins = (secs//60)
+		last_clock_update = None
+		
+		return [clock_time, clock_aligner, clock_font, last_clock_update]
 
-		clock_str = f"{mins}:{':'.join([str(t)[::2] for t in (secs/10, hundreth_secs/10)])}"
+	def start_clock(self):
+		self.clock[3] = time.perf_counter() # start clock
 
+	def update_clock(self, elapsed_time): # elapsed time in ms
+		self.clock[0] += elapsed_time
+
+		clock_time, clock_rect, clock_font, _ = self.clock
+		
+		hundreth_secs = int(clock_time//10)%100
+		secs = int(clock_time//1000)%60
+		mins = int(clock_time//1000//60)
+
+		clock_str = f"{mins}:{str(secs/10)[::2]}.{str(hundreth_secs/10)[::2]}"
+		
 		clock_text = clock_font.render(clock_str, True, COLORS['white'])
-		clock_aligner = clock_text.get_rect(center=clock_rect.center)
+		#clock_aligner = clock_text.get_rect(center=clock_rect.center)
 		
 		self.screen.fill(COLORS['blue'])
-		self.screen.blit(clock_text, clock_aligner)
-		pygame.display.update()
+		
+		self.screen.blit(clock_text, self.clock[1])
+		#self.screen.blit(clock_text, clock_aligner)
+		pygame.display.update(self.screen.get_rect())
+
+	def update_clock_dynamic(self):
+		last_clock_update = self.clock[3]
+		if last_clock_update is None:
+			return
+		cur_time = time.perf_counter()
+		time_diff_ms = (cur_time-last_clock_update)*1000
+		self.clock[3] = cur_time
+		self.update_clock(time_diff_ms)
 
 if __name__ == '__main__':
 	keep_settings = False
