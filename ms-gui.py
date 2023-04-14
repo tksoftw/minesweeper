@@ -756,8 +756,46 @@ class TimerBar:
 
 		self.screen.fill(COLORS['blue'])
 
+		self.clock = self.get_clock()
+		self.update_clock()
+
+	def get_px_to_pt_multiplier(self, ch='O'):
+		# x -> font pt, y -> font px
+		y1 = 10
+		f1 = pygame.font.Font(pygame.font.get_default_font(), y1)
+		x1 = f1.size(ch)[0]
+		y2 = 100
+		f2 = pygame.font.Font(pygame.font.get_default_font(), y2)
+		x2 = f2.size(ch)[0]
+		return (y1/x1 + y2/x2)/2
+
+	def get_clock(self):
+		clock_rect = pygame.Rect(0, 0, self.w/3, self.h/2)
+		clock_rect.center = self.screen.get_rect().center
+		
+		clock_time = 0
+
+		m = self.get_px_to_pt_multiplier('00:00:00')
+		pt = int(m*clock_rect.h*7.5)
+		clock_font = pygame.font.Font(pygame.font.get_default_font(), pt)
+
+		return clock_time, clock_rect, clock_font
 
 
+	def update_clock(self, elapsed_time=0): # elapsed time in ms
+		clock_time, clock_rect, clock_font = self.clock
+		
+		ms_x10 = clock_time//10
+		secs = clock_time//1000
+		mins = secs//60
+
+		clock_str = f"{secs}:{':'.join([str(t)[::2] for t in (secs/10, ms_x10/10)])}"
+
+		clock_text = clock_font.render(clock_str, True, COLORS['white'])
+		clock_aligner = clock_text.get_rect(center=clock_rect.center)
+		
+		self.screen.blit(clock_text, clock_aligner)
+		pygame.display.update()
 
 if __name__ == '__main__':
 	keep_settings = False
