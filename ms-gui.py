@@ -441,11 +441,11 @@ class GridGUI():
 		self.g = g
 		self.screen_length = screen_length
 
-		timer_bar = TimerBar(screen_length)
+		timer = TimerBar(screen_length)
 
-		self.screen = timer_bar.play_area
-		self.full_screen = timer_bar.full_screen
-		self.timer_bar = timer_bar
+		self.screen = timer.play_area
+		self.full_screen = timer.full_screen
+		self.timer = timer
 		
 		self.row_length = len(g.grid)
 		self.const_border = const_border
@@ -546,7 +546,7 @@ class GridGUI():
 			pygame.display.update()
 	
 	def translate_coords_to_grid(self, x, y):
-		return (x, y-self.timer_bar.h)
+		return (x, y-self.timer.h)
 
 	def get_box_inds_from_pos(self, x, y):
 		x, y = self.translate_coords_to_grid(x,y)
@@ -701,10 +701,13 @@ class GridGUI():
 				if event.type == pygame.MOUSEBUTTONDOWN and exit_main_menu_box.collidepoint(event.pos):
 					return False
 
-
+	
 	def play_game(self):
 		ctrl_pressed = False
+		clock = pygame.time.Clock()
 		while True:
+			clock.tick(1000)
+			self.timer.update_clock(1)
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:
 					raise StopIteration
@@ -779,21 +782,24 @@ class TimerBar:
 		pt = int(m*clock_rect.h*7.5)
 		clock_font = pygame.font.Font(pygame.font.get_default_font(), pt)
 
-		return clock_time, clock_rect, clock_font
+		return [clock_time, clock_rect, clock_font]
 
 
 	def update_clock(self, elapsed_time=0): # elapsed time in ms
+		self.clock[0] += 1
+
 		clock_time, clock_rect, clock_font = self.clock
 		
-		ms_x10 = clock_time//10
-		secs = clock_time//1000
-		mins = secs//60
+		hundreth_secs = (clock_time//10)%100
+		secs = (clock_time//1000)%60
+		mins = (secs//60)
 
-		clock_str = f"{secs}:{':'.join([str(t)[::2] for t in (secs/10, ms_x10/10)])}"
+		clock_str = f"{mins}:{':'.join([str(t)[::2] for t in (secs/10, hundreth_secs/10)])}"
 
 		clock_text = clock_font.render(clock_str, True, COLORS['white'])
 		clock_aligner = clock_text.get_rect(center=clock_rect.center)
 		
+		self.screen.fill(COLORS['blue'])
 		self.screen.blit(clock_text, clock_aligner)
 		pygame.display.update()
 
