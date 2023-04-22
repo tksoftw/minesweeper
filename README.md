@@ -1,8 +1,10 @@
 # minesweeper
 vim settings used:
 ```vi
-set ts=4 sw=4
-set autoindent
+set softtabstop=4
+set tabstop=4
+set shiftwidth=4
+set expandtab
 ```
 border size graph vis:
 https://www.desmos.com/calculator/ivv2lua7se
